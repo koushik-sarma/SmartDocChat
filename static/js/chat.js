@@ -4,6 +4,7 @@ class PDFChatApp {
         this.setupEventListeners();
         this.loadStats();
         this.scrollToBottom();
+        this.currentAudio = null; // Track current playing audio
     }
     
     initializeElements() {
@@ -26,6 +27,13 @@ class PDFChatApp {
         this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
         this.chatForm.addEventListener('submit', (e) => this.handleChatSubmit(e));
         this.clearSessionBtn.addEventListener('click', () => this.clearSession());
+        
+        // TTS event listeners using event delegation
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tts-play-btn') || e.target.closest('.tts-play-btn')) {
+                this.handleTTSPlay(e);
+            }
+        });
         
         // Enable input when documents are present
         this.updateInputState();
@@ -142,6 +150,27 @@ class PDFChatApp {
             sourcesHtml += '</div>';
         }
         
+        let ttsControlsHtml = '';
+        if (type === 'assistant') {
+            ttsControlsHtml = `
+                <div class="message-actions mt-2">
+                    <button class="btn btn-sm btn-outline-primary tts-play-btn" 
+                            data-message="${content.replace(/"/g, '&quot;')}" 
+                            title="Play with voice">
+                        <i class="fas fa-play me-1"></i>Play
+                    </button>
+                    <select class="form-select form-select-sm d-inline-block w-auto ms-2 voice-select">
+                        <option value="alloy">Alloy (Neutral)</option>
+                        <option value="echo">Echo (Male)</option>
+                        <option value="fable">Fable (British)</option>
+                        <option value="onyx">Onyx (Deep Male)</option>
+                        <option value="nova" selected>Nova (Female)</option>
+                        <option value="shimmer">Shimmer (Bright Female)</option>
+                    </select>
+                </div>
+            `;
+        }
+        
         messageDiv.innerHTML = `
             <div class="message-content">
                 <div class="message-header">
@@ -151,6 +180,7 @@ class PDFChatApp {
                     <small class="text-muted">${timestamp}</small>
                 </div>
                 <div class="message-text">${this.formatMessageContent(content)}</div>
+                ${ttsControlsHtml}
                 ${sourcesHtml}
             </div>
         `;
@@ -287,6 +317,79 @@ class PDFChatApp {
             }
         } catch (error) {
             console.error('Failed to load stats:', error);
+        }
+    }
+    
+    async handleTTSPlay(e) {
+        e.preventDefault();
+        const button = e.target.closest('.tts-play-btn');
+        const messageText = button.dataset.message;
+        const voiceSelect = button.parentElement.querySelector('.voice-select');
+        const selectedVoice = voiceSelect.value;
+        
+        // Stop current audio if playing
+        if (this.currentAudio && !this.currentAudio.paused) {
+            this.currentAudio.pause();
+            this.currentAudio = null;
+            // Reset all play buttons
+            document.querySelectorAll('.tts-play-btn').forEach(btn => {
+                btn.innerHTML = '<i class="fas fa-play me-1"></i>Play';
+                btn.disabled = false;
+            });
+        }
+        
+        // Update button state
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+        button.disabled = true;
+        
+        try {
+            const response = await fetch('/tts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: messageText,
+                    voice: selectedVoice,
+                    emotion: 'explanatory'
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('TTS request failed');
+            }
+            
+            // Create audio element and play
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            this.currentAudio = new Audio(audioUrl);
+            
+            button.innerHTML = '<i class="fas fa-pause me-1"></i>Playing...';
+            
+            this.currentAudio.addEventListener('ended', () => {
+                button.innerHTML = '<i class="fas fa-play me-1"></i>Play';
+                button.disabled = false;
+                URL.revokeObjectURL(audioUrl);
+                this.currentAudio = null;
+            });
+            
+            this.currentAudio.addEventListener('error', () => {
+                button.innerHTML = '<i class="fas fa-play me-1"></i>Play';
+                button.disabled = false;
+                URL.revokeObjectURL(audioUrl);
+                this.currentAudio = null;
+                console.error('Audio playback error');
+            });
+            
+            await this.currentAudio.play();
+            
+        } catch (error) {
+            console.error('TTS Error:', error);
+            button.innerHTML = '<i class="fas fa-play me-1"></i>Play';
+            button.disabled = false;
+            
+            // Show error message
+            this.showUploadStatus('Voice playback failed. Please try again.', 'error');
         }
     }
     

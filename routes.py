@@ -2,18 +2,21 @@ import os
 import uuid
 import json
 import logging
-from flask import render_template, request, jsonify, session, redirect, url_for, flash
+import tempfile
+from flask import render_template, request, jsonify, session, redirect, url_for, flash, Response, send_from_directory
 from werkzeug.utils import secure_filename
 from app import app, db
 from models import Document, ChatMessage
 from pdf_processor import PDFProcessor
 from chat_service import ChatService
+from tts_service import SimpleTTSWrapper
 
 logger = logging.getLogger(__name__)
 
 # Initialize services
 pdf_processor = PDFProcessor()
 chat_service = ChatService()
+tts_service = SimpleTTSWrapper()
 
 def allowed_file(filename):
     """Check if file is a PDF."""
@@ -253,3 +256,51 @@ def get_stats():
 
 # Import time module for timestamp
 import time
+
+@app.route('/tts', methods=['POST'])
+def text_to_speech():
+    """Convert text to speech using OpenAI TTS."""
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        voice = data.get('voice', 'alloy')
+        emotion = data.get('emotion', 'neutral')
+        
+        if not text:
+            return jsonify({'error': 'Text is required'}), 400
+        
+        # Create expressive speech
+        audio_data = tts_service.create_expressive_speech_sync(text, voice, emotion)
+        
+        # Save to temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
+        temp_file.write(audio_data)
+        temp_file.close()
+        
+        # Return audio file
+        def remove_file():
+            try:
+                os.unlink(temp_file.name)
+            except:
+                pass
+        
+        return send_from_directory(
+            os.path.dirname(temp_file.name), 
+            os.path.basename(temp_file.name),
+            as_attachment=False,
+            mimetype='audio/mpeg'
+        )
+        
+    except Exception as e:
+        logger.error(f"TTS error: {e}")
+        return jsonify({'error': 'TTS conversion failed'}), 500
+
+@app.route('/tts/voices', methods=['GET'])
+def get_voices():
+    """Get available TTS voices."""
+    try:
+        voices = tts_service.get_available_voices()
+        return jsonify(voices)
+    except Exception as e:
+        logger.error(f"Error getting voices: {e}")
+        return jsonify({'error': 'Failed to get voices'}), 500
