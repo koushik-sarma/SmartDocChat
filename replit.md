@@ -8,7 +8,7 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 
 ### Backend Architecture
 - **Framework**: Flask with SQLAlchemy ORM
-- **Database**: SQLite (configurable to other databases via DATABASE_URL)
+- **Database**: PostgreSQL with connection pooling and optimization
 - **Session Management**: Flask sessions with proxy fix for deployment
 - **File Handling**: Werkzeug secure file handling with 50MB upload limit
 - **Logging**: Built-in Python logging with DEBUG level
@@ -98,7 +98,10 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 ```
 
 ## Changelog
-- June 29, 2025. Initial setup
+- June 29, 2025: Initial setup with complete RAG application
+- June 29, 2025: Added PostgreSQL database with connection pooling
+- June 29, 2025: Enhanced PDF processing with PyMuPDF fallback
+- June 29, 2025: Improved error handling for robust file uploads
 
 ## User Preferences
 
