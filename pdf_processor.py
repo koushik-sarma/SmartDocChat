@@ -1,4 +1,5 @@
 import pdfplumber
+import fitz  # PyMuPDF
 import logging
 from typing import List, Generator
 import os
@@ -15,12 +16,27 @@ class PDFProcessor:
         Uses streaming approach to avoid loading entire file into memory.
         """
         try:
+            # First, check if file exists and is readable
+            if not os.path.exists(pdf_path):
+                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+            
+            file_size = os.path.getsize(pdf_path)
+            if file_size == 0:
+                raise ValueError("PDF file is empty")
+            
             with pdfplumber.open(pdf_path) as pdf:
+                if len(pdf.pages) == 0:
+                    raise ValueError("PDF file contains no pages")
+                
                 current_chunk = ""
+                processed_pages = 0
                 
                 for page_num, page in enumerate(pdf.pages):
                     try:
+                        # Add timeout protection for page processing
                         page_text = page.extract_text()
+                        processed_pages += 1
+                        
                         if page_text:
                             # Clean the text
                             page_text = self._clean_text(page_text)
@@ -30,20 +46,79 @@ class PDFProcessor:
                             while len(current_chunk.split()) > self.chunk_size:
                                 chunk_words = current_chunk.split()
                                 chunk = " ".join(chunk_words[:self.chunk_size])
-                                yield chunk
+                                if chunk.strip():  # Only yield non-empty chunks
+                                    yield chunk
                                 current_chunk = " ".join(chunk_words[self.chunk_size:])
                     
                     except Exception as e:
-                        logger.warning(f"Error processing page {page_num}: {e}")
+                        logger.warning(f"Error processing page {page_num + 1}: {e}")
                         continue
                 
                 # Yield remaining text as final chunk
                 if current_chunk.strip():
                     yield current_chunk.strip()
+                
+                if processed_pages == 0:
+                    raise ValueError("No pages could be processed from the PDF")
                     
         except Exception as e:
-            logger.error(f"Error processing PDF {pdf_path}: {e}")
-            raise
+            logger.error(f"Error processing PDF with pdfplumber {pdf_path}: {e}")
+            # Try fallback with PyMuPDF
+            yield from self._extract_with_pymupdf(pdf_path)
+    
+    def _extract_with_pymupdf(self, pdf_path: str) -> Generator[str, None, None]:
+        """Fallback PDF extraction using PyMuPDF."""
+        try:
+            logger.info(f"Trying PyMuPDF fallback for {pdf_path}")
+            doc = fitz.open(pdf_path)
+            
+            if doc.page_count == 0:
+                raise ValueError("PDF file contains no pages")
+            
+            current_chunk = ""
+            processed_pages = 0
+            
+            for page_num in range(doc.page_count):
+                try:
+                    page = doc[page_num]
+                    page_text = page.get_text()
+                    processed_pages += 1
+                    
+                    if page_text:
+                        # Clean the text
+                        page_text = self._clean_text(page_text)
+                        current_chunk += f" {page_text}"
+                        
+                        # Split into chunks when we exceed chunk_size
+                        while len(current_chunk.split()) > self.chunk_size:
+                            chunk_words = current_chunk.split()
+                            chunk = " ".join(chunk_words[:self.chunk_size])
+                            if chunk.strip():
+                                yield chunk
+                            current_chunk = " ".join(chunk_words[self.chunk_size:])
+                
+                except Exception as e:
+                    logger.warning(f"Error processing page {page_num + 1} with PyMuPDF: {e}")
+                    continue
+            
+            doc.close()
+            
+            # Yield remaining text as final chunk
+            if current_chunk.strip():
+                yield current_chunk.strip()
+            
+            if processed_pages == 0:
+                raise ValueError("No pages could be processed from the PDF")
+                
+        except Exception as e:
+            logger.error(f"PyMuPDF fallback also failed for {pdf_path}: {e}")
+            # Clean up the file if it's corrupted
+            if os.path.exists(pdf_path):
+                try:
+                    os.remove(pdf_path)
+                except:
+                    pass
+            raise ValueError(f"Failed to process PDF with both extraction methods: {str(e)}")
     
     def _clean_text(self, text: str) -> str:
         """Clean extracted text by removing excessive whitespace and formatting."""

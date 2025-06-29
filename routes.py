@@ -44,7 +44,7 @@ def upload_file():
             return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
-        if file.filename == '':
+        if not file or file.filename == '' or file.filename is None:
             return jsonify({'error': 'No file selected'}), 400
         
         if not allowed_file(file.filename):
@@ -66,7 +66,24 @@ def upload_file():
         
         # Process PDF
         try:
-            chunks = list(pdf_processor.extract_text_chunks(file_path))
+            # Validate PDF file before processing
+            try:
+                pdf_info = pdf_processor.get_pdf_info(file_path)
+                if pdf_info['page_count'] == 0:
+                    raise ValueError("PDF file contains no readable pages")
+            except Exception as e:
+                raise ValueError(f"Invalid PDF file: {str(e)}")
+            
+            # Extract text chunks
+            chunks = []
+            try:
+                chunk_generator = pdf_processor.extract_text_chunks(file_path)
+                chunks = list(chunk_generator)
+            except Exception as e:
+                raise ValueError(f"Could not extract text from PDF: {str(e)}")
+            
+            if not chunks:
+                raise ValueError("No text content could be extracted from the PDF")
             
             # Save document record
             document = Document(
@@ -80,7 +97,12 @@ def upload_file():
             db.session.commit()
             
             # Add to vector store
-            chat_service.process_pdf_chunks(chunks, document.id)
+            try:
+                chat_service.process_pdf_chunks(chunks, document.id)
+            except Exception as e:
+                # Rollback database if vector store fails
+                db.session.rollback()
+                raise ValueError(f"Failed to process document for search: {str(e)}")
             
             return jsonify({
                 'message': f'Successfully uploaded and processed {file.filename}',
@@ -88,12 +110,25 @@ def upload_file():
                 'chunks_processed': len(chunks)
             })
             
-        except Exception as e:
-            # Clean up file if processing failed
+        except ValueError as e:
+            # Handle validation errors with user-friendly messages
             if os.path.exists(file_path):
-                os.remove(file_path)
-            logger.error(f"Error processing PDF: {e}")
-            return jsonify({'error': f'Error processing PDF: {str(e)}'}), 500
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
+            logger.warning(f"PDF validation error: {e}")
+            return jsonify({'error': str(e)}), 400
+            
+        except Exception as e:
+            # Handle unexpected errors
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
+            logger.error(f"Unexpected error processing PDF: {e}")
+            return jsonify({'error': 'An unexpected error occurred while processing the PDF. Please try again with a different file.'}), 500
             
     except Exception as e:
         logger.error(f"Error in file upload: {e}")
