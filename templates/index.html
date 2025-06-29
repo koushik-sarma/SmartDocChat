@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Chat - RAG Assistant</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid h-100">
+        <div class="row h-100">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="d-flex flex-column h-100">
+                    <div class="sidebar-header p-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-file-pdf text-danger me-2"></i>
+                            PDF Chat
+                        </h5>
+                        <small class="text-muted">RAG Assistant</small>
+                    </div>
+                    
+                    <!-- File Upload -->
+                    <div class="p-3 border-bottom">
+                        <label for="pdfUpload" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-upload me-2"></i>
+                            Upload PDF
+                        </label>
+                        <input type="file" id="pdfUpload" accept=".pdf" style="display: none;">
+                        
+                        <div id="uploadProgress" class="progress mt-2" style="display: none;">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        
+                        <div id="uploadStatus" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- Documents List -->
+                    <div class="flex-grow-1 p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">Documents</h6>
+                            <span id="docCount" class="badge bg-secondary">{{ documents|length }}</span>
+                        </div>
+                        
+                        <div id="documentsList">
+                            {% for doc in documents %}
+                            <div class="document-item mb-2 p-2 rounded" data-doc-id="{{ doc.id }}">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-file-pdf text-danger me-2"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="small fw-bold text-truncate">{{ doc.filename }}</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">
+                                            {{ doc.chunk_count }} chunks
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="p-3 border-top">
+                        <button id="clearSession" class="btn btn-outline-danger btn-sm w-100">
+                            <i class="fas fa-trash me-2"></i>
+                            Clear Session
+                        </button>
+                        
+                        <div id="stats" class="mt-2 small text-muted">
+                            <div>Total Chunks: <span id="totalChunks">0</span></div>
+                            <div>Session Docs: <span id="sessionDocs">{{ documents|length }}</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Chat Area -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="d-flex flex-column h-100">
+                    <!-- Chat Header -->
+                    <div class="chat-header p-3 border-bottom">
+                        <h4 class="mb-0">
+                            <i class="fas fa-comments me-2"></i>
+                            Chat with your Documents
+                        </h4>
+                        <small class="text-muted">Ask questions about your uploaded PDFs - responses include web search augmentation</small>
+                    </div>
+                    
+                    <!-- Chat Messages -->
+                    <div class="flex-grow-1 chat-container">
+                        <div id="chatMessages" class="h-100 p-3">
+                            {% if not messages %}
+                            <div class="welcome-message text-center text-muted">
+                                <i class="fas fa-robot fa-3x mb-3"></i>
+                                <h5>Welcome to PDF Chat!</h5>
+                                <p>Upload a PDF document and start asking questions.</p>
+                                <p>I'll search your documents and the web to provide comprehensive answers.</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% for message in messages %}
+                            <div class="message {{ message.message_type }}-message mb-3">
+                                <div class="message-content">
+                                    <div class="message-header">
+                                        <strong>
+                                            {% if message.message_type == 'user' %}
+                                                <i class="fas fa-user me-1"></i>You
+                                            {% else %}
+                                                <i class="fas fa-robot me-1"></i>Assistant
+                                            {% endif %}
+                                        </strong>
+                                        <small class="text-muted">{{ message.timestamp }}</small>
+                                    </div>
+                                    <div class="message-text">{{ message.content }}</div>
+                                    
+                                    {% if message.sources %}
+                                    <div class="sources mt-2">
+                                        <small class="text-muted">Sources:</small>
+                                        {% for source in message.sources %}
+                                        <div class="source-item">
+                                            {% if source.type == 'pdf' %}
+                                                <i class="fas fa-file-pdf text-danger"></i> PDF Document
+                                            {% else %}
+                                                <i class="fas fa-globe text-info"></i> {{ source.title }}
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Input -->
+                    <div class="chat-input p-3 border-top">
+                        <form id="chatForm" class="d-flex">
+                            <input type="text" id="messageInput" class="form-control me-2" 
+                                   placeholder="Ask a question about your documents..." 
+                                   disabled>
+                            <button type="submit" id="sendButton" class="btn btn-primary px-4" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                        
+                        <div id="typingIndicator" class="mt-2" style="display: none;">
+                            <small class="text-muted">
+                                <i class="fas fa-spinner fa-spin me-1"></i>
+                                AI is thinking...
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chat JS -->
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>

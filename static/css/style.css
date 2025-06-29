@@ -1,0 +1,205 @@
+/* Custom styles for PDF Chat App */
+html, body {
+    height: 100%;
+}
+
+.h-100 {
+    height: 100vh !important;
+}
+
+.sidebar {
+    background-color: var(--bs-gray-900);
+    border-right: 1px solid var(--bs-border-color);
+}
+
+.sidebar-header {
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.main-content {
+    background-color: var(--bs-body-bg);
+}
+
+.chat-container {
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+}
+
+.chat-header {
+    background-color: var(--bs-gray-800);
+}
+
+.chat-input {
+    background-color: var(--bs-gray-800);
+}
+
+.message {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.message-content {
+    background-color: var(--bs-gray-800);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.user-message .message-content {
+    background-color: var(--bs-primary);
+    margin-left: 20%;
+}
+
+.assistant-message .message-content {
+    background-color: var(--bs-gray-700);
+    margin-right: 20%;
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.message-text {
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.document-item {
+    background-color: var(--bs-gray-800);
+    border: 1px solid var(--bs-border-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.document-item:hover {
+    background-color: var(--bs-gray-700);
+}
+
+.sources {
+    border-top: 1px solid var(--bs-border-color);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.source-item {
+    font-size: 0.8rem;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+
+.welcome-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    max-width: 400px;
+}
+
+.progress {
+    height: 4px;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 280px;
+        height: 100vh;
+        z-index: 1050;
+        transition: left 0.3s ease;
+    }
+    
+    .sidebar.show {
+        left: 0;
+    }
+    
+    .main-content {
+        width: 100%;
+    }
+    
+    .user-message .message-content {
+        margin-left: 10%;
+    }
+    
+    .assistant-message .message-content {
+        margin-right: 10%;
+    }
+}
+
+/* Scrollbar styling */
+.chat-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-container::-webkit-scrollbar-track {
+    background: var(--bs-gray-800);
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+    background: var(--bs-gray-600);
+    border-radius: 3px;
+}
+
+.chat-container::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-gray-500);
+}
+
+/* Loading animations */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Button hover effects */
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* File input styling */
+input[type="file"] {
+    display: none;
+}
+
+/* Chat input focus */
+#messageInput:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Status messages */
+.text-success {
+    color: #198754 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.text-info {
+    color: #0dcaf0 !important;
+}

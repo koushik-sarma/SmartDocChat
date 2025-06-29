@@ -1,0 +1,105 @@
+# PDF Chat - RAG Assistant
+
+## Overview
+
+This is a Flask-based PDF chat application that implements Retrieval-Augmented Generation (RAG) to enable users to chat with their PDF documents. The system combines document content with web search results to provide comprehensive answers to user queries.
+
+## System Architecture
+
+### Backend Architecture
+- **Framework**: Flask with SQLAlchemy ORM
+- **Database**: SQLite (configurable to other databases via DATABASE_URL)
+- **Session Management**: Flask sessions with proxy fix for deployment
+- **File Handling**: Werkzeug secure file handling with 50MB upload limit
+- **Logging**: Built-in Python logging with DEBUG level
+
+### Frontend Architecture
+- **Template Engine**: Jinja2 templates
+- **UI Framework**: Bootstrap with dark theme
+- **Icons**: Font Awesome
+- **JavaScript**: Vanilla ES6 classes for chat functionality
+- **Styling**: Custom CSS with Bootstrap variables
+
+### AI/ML Components
+- **LLM Integration**: OpenAI GPT models via OpenAI Python client
+- **Vector Database**: FAISS for similarity search
+- **Embeddings**: OpenAI text-embedding models (1536 dimensions)
+- **Text Processing**: pdfplumber for PDF text extraction
+
+## Key Components
+
+### 1. Document Processing Pipeline
+- **PDFProcessor**: Extracts text from PDFs in configurable chunks (default 1000 words)
+- **VectorStore**: Manages FAISS index for document embeddings with cosine similarity
+- **Text Chunking**: Streaming approach to handle large files efficiently
+
+### 2. Chat System
+- **ChatService**: Orchestrates PDF content retrieval and web search
+- **Hybrid Search**: Combines PDF vector search with DuckDuckGo web search
+- **Context Assembly**: Merges multiple sources with relevance scoring
+
+### 3. Web Search Integration
+- **WebSearcher**: DuckDuckGo API integration for real-time information
+- **Source Attribution**: Tracks and displays source information for all responses
+
+### 4. Database Models
+- **Document**: Stores PDF metadata (filename, path, chunk count, file size)
+- **ChatMessage**: Stores conversation history with source attribution
+- **Session Management**: UUID-based sessions for multi-user support
+
+## Data Flow
+
+1. **PDF Upload**: User uploads PDF → File validation → Text extraction → Chunking → Embedding generation → Vector storage
+2. **Query Processing**: User question → Vector similarity search → Web search (if needed) → Context assembly → LLM response → Source attribution
+3. **Response Display**: Formatted response with expandable source citations
+
+## External Dependencies
+
+### Required APIs
+- **OpenAI API**: For embeddings and chat completions (requires OPENAI_API_KEY)
+- **DuckDuckGo API**: For web search (no API key required)
+
+### Python Packages
+- Flask ecosystem (Flask, SQLAlchemy, Werkzeug)
+- AI/ML libraries (openai, faiss-cpu, numpy)
+- PDF processing (pdfplumber)
+- HTTP requests (requests)
+
+### Environment Variables
+- `OPENAI_API_KEY`: Required for OpenAI services
+- `DATABASE_URL`: Optional database connection string (defaults to SQLite)
+- `SESSION_SECRET`: Optional session secret (has development default)
+
+## Deployment Strategy
+
+### Development
+- Flask development server with debug mode
+- SQLite database for simplicity
+- Local file storage in `uploads/` directory
+
+### Production Considerations
+- Proxy fix middleware included for reverse proxy deployment
+- Database pooling configured with connection recycling
+- Environment-based configuration for secrets
+- File upload size limits enforced
+
+### File Structure
+```
+├── app.py              # Flask application factory
+├── main.py             # Application entry point
+├── models.py           # Database models
+├── routes.py           # HTTP route handlers
+├── chat_service.py     # Core chat logic
+├── pdf_processor.py    # PDF text extraction
+├── vector_store.py     # FAISS vector operations
+├── web_search.py       # Web search integration
+├── templates/          # HTML templates
+└── static/            # CSS/JS assets
+```
+
+## Changelog
+- June 29, 2025. Initial setup
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
