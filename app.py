@@ -6,7 +6,11 @@ from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+
+# Disable debug logging for pdfminer to prevent gunicorn conflicts
+logging.getLogger('pdfminer').setLevel(logging.WARNING)
+logging.getLogger('pdfplumber').setLevel(logging.WARNING)
 
 class Base(DeclarativeBase):
     pass

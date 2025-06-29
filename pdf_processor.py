@@ -13,17 +13,25 @@ class PDFProcessor:
     def extract_text_chunks(self, pdf_path: str) -> Generator[str, None, None]:
         """
         Extract text from PDF in chunks to handle large files efficiently.
-        Uses streaming approach to avoid loading entire file into memory.
+        Uses PyMuPDF as primary method with pdfplumber fallback.
         """
+        # First, check if file exists and is readable
+        if not os.path.exists(pdf_path):
+            raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+        
+        file_size = os.path.getsize(pdf_path)
+        if file_size == 0:
+            raise ValueError("PDF file is empty")
+        
+        # Try PyMuPDF first (more reliable)
         try:
-            # First, check if file exists and is readable
-            if not os.path.exists(pdf_path):
-                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-            
-            file_size = os.path.getsize(pdf_path)
-            if file_size == 0:
-                raise ValueError("PDF file is empty")
-            
+            yield from self._extract_with_pymupdf(pdf_path)
+            return
+        except Exception as e:
+            logger.warning(f"PyMuPDF failed for {pdf_path}, trying pdfplumber fallback")
+        
+        # Fallback to pdfplumber
+        try:
             with pdfplumber.open(pdf_path) as pdf:
                 if len(pdf.pages) == 0:
                     raise ValueError("PDF file contains no pages")
@@ -33,20 +41,17 @@ class PDFProcessor:
                 
                 for page_num, page in enumerate(pdf.pages):
                     try:
-                        # Add timeout protection for page processing
                         page_text = page.extract_text()
                         processed_pages += 1
                         
                         if page_text:
-                            # Clean the text
                             page_text = self._clean_text(page_text)
                             current_chunk += f" {page_text}"
                             
-                            # Split into chunks when we exceed chunk_size
                             while len(current_chunk.split()) > self.chunk_size:
                                 chunk_words = current_chunk.split()
                                 chunk = " ".join(chunk_words[:self.chunk_size])
-                                if chunk.strip():  # Only yield non-empty chunks
+                                if chunk.strip():
                                     yield chunk
                                 current_chunk = " ".join(chunk_words[self.chunk_size:])
                     
@@ -54,7 +59,6 @@ class PDFProcessor:
                         logger.warning(f"Error processing page {page_num + 1}: {e}")
                         continue
                 
-                # Yield remaining text as final chunk
                 if current_chunk.strip():
                     yield current_chunk.strip()
                 
@@ -62,17 +66,21 @@ class PDFProcessor:
                     raise ValueError("No pages could be processed from the PDF")
                     
         except Exception as e:
-            logger.error(f"Error processing PDF with pdfplumber {pdf_path}: {e}")
-            # Try fallback with PyMuPDF
-            yield from self._extract_with_pymupdf(pdf_path)
+            if os.path.exists(pdf_path):
+                try:
+                    os.remove(pdf_path)
+                except:
+                    pass
+            raise ValueError(f"Failed to process PDF: {str(e)}")
     
     def _extract_with_pymupdf(self, pdf_path: str) -> Generator[str, None, None]:
         """Fallback PDF extraction using PyMuPDF."""
         try:
-            logger.info(f"Trying PyMuPDF fallback for {pdf_path}")
+            logger.info(f"Using PyMuPDF for {pdf_path}")
             doc = fitz.open(pdf_path)
             
             if doc.page_count == 0:
+                doc.close()
                 raise ValueError("PDF file contains no pages")
             
             current_chunk = ""
@@ -80,8 +88,8 @@ class PDFProcessor:
             
             for page_num in range(doc.page_count):
                 try:
-                    page = doc[page_num]
-                    page_text = page.get_text()
+                    page = doc.load_page(page_num)
+                    page_text = page.get_text()  # type: ignore
                     processed_pages += 1
                     
                     if page_text:
@@ -111,14 +119,14 @@ class PDFProcessor:
                 raise ValueError("No pages could be processed from the PDF")
                 
         except Exception as e:
-            logger.error(f"PyMuPDF fallback also failed for {pdf_path}: {e}")
+            logger.error(f"PyMuPDF fallback failed for {pdf_path}: {e}")
             # Clean up the file if it's corrupted
             if os.path.exists(pdf_path):
                 try:
                     os.remove(pdf_path)
                 except:
                     pass
-            raise ValueError(f"Failed to process PDF with both extraction methods: {str(e)}")
+            raise ValueError(f"Failed to process PDF: {str(e)}")
     
     def _clean_text(self, text: str) -> str:
         """Clean extracted text by removing excessive whitespace and formatting."""
