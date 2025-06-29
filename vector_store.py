@@ -55,13 +55,12 @@ class VectorStore:
             
             results = []
             for score, idx in zip(scores[0], indices[0]):
-                if idx < len(self.texts):
+                if idx >= 0 and idx < len(self.texts):  # Check for valid index
                     results.append((
                         self.texts[idx],
                         float(score),
                         self.document_ids[idx]
                     ))
-            
             return results
             
         except Exception as e:

@@ -40,11 +40,12 @@ class ChatService:
             context_parts = []
             
             # 1. Search PDF content
-            pdf_results = self.vector_store.search(query, k=3)
+            pdf_results = self.vector_store.search(query, k=5)
+            
             if pdf_results:
                 pdf_context = []
                 for text, score, doc_id in pdf_results:
-                    if score > 0.5:  # Relevance threshold
+                    if score > 0.1:  # Lower relevance threshold for better results
                         pdf_context.append(text)
                         sources.append({
                             'type': 'pdf',
@@ -54,7 +55,7 @@ class ChatService:
                         })
                 
                 if pdf_context:
-                    context_parts.append(f"📘 **From PDF Documents:**\n{' '.join(pdf_context[:2])}")
+                    context_parts.append(f"📘 **From PDF Documents:**\n{' '.join(pdf_context[:3])}")
             
             # 2. Search web content
             web_results = self.web_searcher.search_multiple_sources(query, max_results=2)
