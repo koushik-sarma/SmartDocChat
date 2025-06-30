@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Test</title>
+</head>
+<body>
+    <h2>PDF Upload Test</h2>
+    <form id="testForm">
+        <input type="file" id="fileInput" accept=".pdf">
+        <button type="submit">Upload</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                document.getElementById('result').innerHTML = 'No file selected';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ class PDFChatApp {
     }
     
     initializeElements() {
+        // Core elements with null checks
         this.fileInput = document.getElementById('pdfUpload');
         this.uploadProgress = document.getElementById('uploadProgress');
         this.uploadStatus = document.getElementById('uploadStatus');
@@ -26,6 +27,21 @@ class PDFChatApp {
         this.sidebarToggle = document.getElementById('sidebarToggle');
         this.sidebar = document.getElementById('sidebar');
         this.mobileOverlay = document.getElementById('mobileOverlay');
+        
+        // Validate critical elements
+        if (!this.fileInput || !this.uploadStatus || !this.chatMessages) {
+            console.error('Critical DOM elements missing');
+            this.showError('Application initialization failed - please refresh the page');
+        }
+    }
+    
+    showError(message) {
+        console.error(message);
+        if (this.uploadStatus) {
+            this.uploadStatus.innerHTML = `<div class="text-danger">${message}</div>`;
+        } else if (this.chatMessages) {
+            this.chatMessages.innerHTML = `<div class="alert alert-danger">${message}</div>`;
+        }
     }
     
     setupEventListeners() {
@@ -71,8 +87,10 @@ class PDFChatApp {
         const file = event.target.files[0];
         if (!file) return;
         
-        // Validate file type
-        if (!file.type.includes('pdf')) {
+        console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
+        
+        // Validate file type - be more specific about PDF validation
+        if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
             this.showUploadStatus('Only PDF files are allowed', 'error');
             return;
         }
@@ -83,6 +101,12 @@ class PDFChatApp {
             return;
         }
         
+        // Validate file is not empty
+        if (file.size === 0) {
+            this.showUploadStatus('File cannot be empty', 'error');
+            return;
+        }
+        
         const formData = new FormData();
         formData.append('file', file);
         
@@ -90,30 +114,61 @@ class PDFChatApp {
         this.showUploadStatus('Uploading and processing PDF...', 'info');
         
         try {
+            console.log('Starting upload request...');
             const response = await fetch('/upload', {
                 method: 'POST',
                 body: formData
             });
             
-            const result = await response.json();
+            console.log('Upload response status:', response.status);
             
-            if (response.ok) {
+            let result;
+            try {
+                result = await response.json();
+                console.log('Upload result:', result);
+            } catch (parseError) {
+                console.error('Failed to parse response JSON:', parseError);
+                throw new Error('Invalid server response');
+            }
+            
+            if (response.ok && result && result.message) {
                 this.showUploadStatus(
-                    `✅ ${result.message} (${result.chunks_processed} chunks processed)`, 
+                    `✅ ${result.message} (${result.chunks_processed || 0} chunks processed)`, 
                     'success'
                 );
-                this.addDocumentToList(result.document);
-                this.updateDocumentCount();
-                this.updateInputState();
-                this.loadStats();
+                
+                if (result.document) {
+                    try {
+                        this.addDocumentToList(result.document);
+                        this.updateDocumentCount();
+                        this.updateInputState();
+                        this.loadStats();
+                    } catch (uiError) {
+                        console.error('UI update error:', uiError);
+                        // Don't fail the upload if UI update fails
+                    }
+                }
             } else {
-                this.showUploadStatus(`❌ ${result.error}`, 'error');
+                const errorMsg = (result && result.error) || `HTTP ${response.status}: ${response.statusText}`;
+                this.showUploadStatus(`❌ ${errorMsg}`, 'error');
             }
         } catch (error) {
-            this.showUploadStatus(`❌ Upload failed: ${error.message}`, 'error');
+            console.error('Upload error details:', error);
+            
+            // Handle different types of errors
+            let errorMessage = 'Upload failed';
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                errorMessage = 'Network error - please check your connection';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            this.showUploadStatus(`❌ ${errorMessage}`, 'error');
         } finally {
             this.showUploadProgress(false);
-            this.fileInput.value = '';
+            if (this.fileInput) {
+                this.fileInput.value = '';
+            }
         }
     }
     
