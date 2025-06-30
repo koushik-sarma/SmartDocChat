@@ -21,6 +21,11 @@ class PDFChatApp {
         this.typingIndicator = document.getElementById('typingIndicator');
         this.totalChunks = document.getElementById('totalChunks');
         this.sessionDocs = document.getElementById('sessionDocs');
+        
+        // Mobile elements
+        this.sidebarToggle = document.getElementById('sidebarToggle');
+        this.sidebar = document.getElementById('sidebar');
+        this.mobileOverlay = document.getElementById('mobileOverlay');
     }
     
     setupEventListeners() {
@@ -32,6 +37,29 @@ class PDFChatApp {
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('tts-play-btn') || e.target.closest('.tts-play-btn')) {
                 this.handleTTSPlay(e);
+            }
+        });
+        
+        // Mobile sidebar controls
+        if (this.sidebarToggle) {
+            this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
+        }
+        
+        if (this.mobileOverlay) {
+            this.mobileOverlay.addEventListener('click', () => this.closeSidebar());
+        }
+        
+        // Close sidebar on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.sidebar.classList.contains('show')) {
+                this.closeSidebar();
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                this.closeSidebar();
             }
         });
         
@@ -391,6 +419,26 @@ class PDFChatApp {
             // Show error message
             this.showUploadStatus('Voice playback failed. Please try again.', 'error');
         }
+    }
+    
+    toggleSidebar() {
+        if (this.sidebar.classList.contains('show')) {
+            this.closeSidebar();
+        } else {
+            this.openSidebar();
+        }
+    }
+    
+    openSidebar() {
+        this.sidebar.classList.add('show');
+        this.mobileOverlay.classList.add('show');
+        document.body.classList.add('sidebar-open');
+    }
+    
+    closeSidebar() {
+        this.sidebar.classList.remove('show');
+        this.mobileOverlay.classList.remove('show');
+        document.body.classList.remove('sidebar-open');
     }
     
     scrollToBottom() {

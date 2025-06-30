@@ -15,10 +15,11 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 
 ### Frontend Architecture
 - **Template Engine**: Jinja2 templates
-- **UI Framework**: Bootstrap with dark theme
+- **UI Framework**: Bootstrap with dark theme, mobile-first responsive design
 - **Icons**: Font Awesome
-- **JavaScript**: Vanilla ES6 classes for chat functionality
-- **Styling**: Custom CSS with Bootstrap variables
+- **JavaScript**: Vanilla ES6 classes for chat functionality with mobile sidebar controls
+- **Styling**: Custom CSS with Bootstrap variables, touch-friendly interface
+- **Mobile Features**: Responsive layout, touch-optimized controls, sidebar navigation
 
 ### AI/ML Components
 - **LLM Integration**: OpenAI GPT models via OpenAI Python client
@@ -106,6 +107,7 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - June 29, 2025: Fixed logging conflicts and PDF processing errors
 - June 29, 2025: Verified full system functionality (upload, chat, search)
 - June 29, 2025: Added TTS functionality using OpenAI TTS with voice selection and expressive speech processing
+- June 30, 2025: Enhanced mobile responsiveness with touch-friendly controls, sidebar navigation, and optimized layouts for all screen sizes
 
 ## User Preferences
 
