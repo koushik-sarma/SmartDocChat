@@ -64,8 +64,17 @@ def upload_file():
         filename = f"{timestamp}_{filename}"
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
-        file.save(file_path)
-        file_size = os.path.getsize(file_path)
+        logging.info(f"Attempting to save file to: {file_path}")
+        
+        try:
+            file.save(file_path)
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"File was not saved to {file_path}")
+            file_size = os.path.getsize(file_path)
+            logging.info(f"File saved successfully: {file_path}, size: {file_size} bytes")
+        except Exception as e:
+            logging.error(f"Failed to save file {file_path}: {str(e)}")
+            raise ValueError(f"Failed to save uploaded file: {str(e)}")
         
         # Process PDF
         try:

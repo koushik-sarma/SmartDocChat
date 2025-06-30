@@ -1,8 +1,8 @@
 import pdfplumber
-import fitz  # PyMuPDF
 import logging
 from typing import List, Generator
 import os
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -13,24 +13,26 @@ class PDFProcessor:
     def extract_text_chunks(self, pdf_path: str) -> Generator[str, None, None]:
         """
         Extract text from PDF in chunks to handle large files efficiently.
-        Uses PyMuPDF as primary method with pdfplumber fallback.
+        Uses pdfplumber for reliable text extraction.
         """
         # First, check if file exists and is readable
+        logger.info(f"Starting PDF text extraction for: {pdf_path}")
+        
         if not os.path.exists(pdf_path):
+            logger.error(f"PDF file not found: {pdf_path}")
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
         
         file_size = os.path.getsize(pdf_path)
+        logger.info(f"PDF file size: {file_size} bytes")
+        
         if file_size == 0:
+            logger.error("PDF file is empty")
             raise ValueError("PDF file is empty")
         
-        # Try PyMuPDF first (more reliable)
-        try:
-            yield from self._extract_with_pymupdf(pdf_path)
-            return
-        except Exception as e:
-            logger.warning(f"PyMuPDF failed for {pdf_path}, trying pdfplumber fallback")
+        # Use pdfplumber for reliable PDF text extraction
+        logger.info("Using pdfplumber for PDF text extraction")
         
-        # Fallback to pdfplumber
+        # Extract text using pdfplumber
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 if len(pdf.pages) == 0:
@@ -59,73 +61,23 @@ class PDFProcessor:
                         logger.warning(f"Error processing page {page_num + 1}: {e}")
                         continue
                 
+                # Yield remaining chunk
                 if current_chunk.strip():
-                    yield current_chunk.strip()
+                    yield current_chunk
                 
                 if processed_pages == 0:
-                    raise ValueError("No pages could be processed from the PDF")
+                    raise ValueError("Could not extract text from any pages")
                     
-        except Exception as e:
-            if os.path.exists(pdf_path):
-                try:
-                    os.remove(pdf_path)
-                except:
-                    pass
-            raise ValueError(f"Failed to process PDF: {str(e)}")
-    
-    def _extract_with_pymupdf(self, pdf_path: str) -> Generator[str, None, None]:
-        """Fallback PDF extraction using PyMuPDF."""
-        try:
-            logger.info(f"Using PyMuPDF for {pdf_path}")
-            doc = fitz.open(pdf_path)
-            
-            if doc.page_count == 0:
-                doc.close()
-                raise ValueError("PDF file contains no pages")
-            
-            current_chunk = ""
-            processed_pages = 0
-            
-            for page_num in range(doc.page_count):
-                try:
-                    page = doc.load_page(page_num)
-                    page_text = page.get_text()  # type: ignore
-                    processed_pages += 1
-                    
-                    if page_text:
-                        # Clean the text
-                        page_text = self._clean_text(page_text)
-                        current_chunk += f" {page_text}"
-                        
-                        # Split into chunks when we exceed chunk_size
-                        while len(current_chunk.split()) > self.chunk_size:
-                            chunk_words = current_chunk.split()
-                            chunk = " ".join(chunk_words[:self.chunk_size])
-                            if chunk.strip():
-                                yield chunk
-                            current_chunk = " ".join(chunk_words[self.chunk_size:])
-                
-                except Exception as e:
-                    logger.warning(f"Error processing page {page_num + 1} with PyMuPDF: {e}")
-                    continue
-            
-            doc.close()
-            
-            # Yield remaining text as final chunk
-            if current_chunk.strip():
-                yield current_chunk.strip()
-            
-            if processed_pages == 0:
-                raise ValueError("No pages could be processed from the PDF")
+                logger.info(f"Successfully processed {processed_pages} pages")
                 
         except Exception as e:
-            logger.error(f"PyMuPDF fallback failed for {pdf_path}: {e}")
-            # Clean up the file if it's corrupted
-            if os.path.exists(pdf_path):
-                try:
+            logger.error(f"PDF processing failed: {str(e)}")
+            # Clean up file if processing failed
+            try:
+                if os.path.exists(pdf_path):
                     os.remove(pdf_path)
-                except:
-                    pass
+            except:
+                pass
             raise ValueError(f"Failed to process PDF: {str(e)}")
     
     def _clean_text(self, text: str) -> str:
@@ -133,33 +85,25 @@ class PDFProcessor:
         if not text:
             return ""
         
-        # Replace multiple whitespace with single space
-        import re
+        # Remove excessive whitespace and normalize line breaks
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        # Remove common PDF artifacts
+        text = re.sub(r'[^\w\s\.\,\!\?\;\:\-\(\)\[\]\"\']', ' ', text)
         text = re.sub(r'\s+', ' ', text)
         
-        # Remove excessive newlines
-        text = re.sub(r'\n\s*\n', '\n', text)
-        
-        return text.strip()
+        return text
     
     def get_pdf_info(self, pdf_path: str) -> dict:
         """Get basic information about the PDF."""
         try:
-            file_size = os.path.getsize(pdf_path)
-            
             with pdfplumber.open(pdf_path) as pdf:
-                page_count = len(pdf.pages)
-                
-                # Try to get metadata
-                metadata = pdf.metadata or {}
-                
                 return {
-                    'file_size': file_size,
-                    'page_count': page_count,
-                    'title': metadata.get('Title', ''),
-                    'author': metadata.get('Author', ''),
-                    'subject': metadata.get('Subject', '')
+                    'page_count': len(pdf.pages),
+                    'file_size': os.path.getsize(pdf_path),
+                    'filename': os.path.basename(pdf_path)
                 }
         except Exception as e:
-            logger.error(f"Error getting PDF info for {pdf_path}: {e}")
-            return {'file_size': os.path.getsize(pdf_path), 'page_count': 0}
+            logger.error(f"Error getting PDF info: {str(e)}")
+            raise ValueError(f"Cannot read PDF file: {str(e)}")
