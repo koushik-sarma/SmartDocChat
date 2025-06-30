@@ -411,7 +411,6 @@ class PDFChatApp {
     async handleTTSPlay(e) {
         e.preventDefault();
         const button = e.target.closest('.tts-btn');
-        const isPlayButton = button.classList.contains('tts-play-btn');
         const isDownloadButton = button.classList.contains('tts-download-btn');
         const controlsDiv = button.closest('.tts-controls');
         const messageText = controlsDiv.dataset.message;
@@ -424,16 +423,29 @@ class PDFChatApp {
             return;
         }
         
-        // Handle play/pause
-        if (this.currentAudio && !this.currentAudio.paused) {
-            // Pause current audio
+        // Check if this button is currently playing
+        const isCurrentlyPlaying = button.innerHTML.includes('fa-pause');
+        
+        // If audio is playing and this is the playing button, pause it
+        if (this.currentAudio && !this.currentAudio.paused && isCurrentlyPlaying) {
             this.currentAudio.pause();
-            this.updateTTSButtonState(button, 'play');
+            button.innerHTML = '<i class="fas fa-play me-1"></i>Play';
             return;
         }
         
+        // Stop any currently playing audio
+        if (this.currentAudio && !this.currentAudio.paused) {
+            this.currentAudio.pause();
+            // Reset the previous playing button
+            const previousButton = document.querySelector('.tts-play-btn:not([disabled]) i.fa-pause');
+            if (previousButton) {
+                previousButton.closest('.tts-play-btn').innerHTML = '<i class="fas fa-play me-1"></i>Play';
+            }
+        }
+        
         // Update button state to loading
-        this.updateTTSButtonState(button, 'loading');
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+        button.disabled = true;
         
         try {
             const response = await fetch('/tts', {
@@ -457,11 +469,12 @@ class PDFChatApp {
             const audioUrl = URL.createObjectURL(audioBlob);
             this.currentAudio = new Audio(audioUrl);
             
-            button.innerHTML = '<i class="fas fa-pause me-1"></i>Playing...';
+            // Update button to show pause state
+            button.innerHTML = '<i class="fas fa-pause me-1"></i>Pause';
+            button.disabled = false;
             
             this.currentAudio.addEventListener('ended', () => {
                 button.innerHTML = '<i class="fas fa-play me-1"></i>Play';
-                button.disabled = false;
                 URL.revokeObjectURL(audioUrl);
                 this.currentAudio = null;
             });
