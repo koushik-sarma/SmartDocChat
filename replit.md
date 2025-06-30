@@ -26,7 +26,7 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - **Vector Database**: FAISS for similarity search
 - **Embeddings**: OpenAI text-embedding models (1536 dimensions)
 - **Text Processing**: pdfplumber for PDF text extraction
-- **Text-to-Speech**: OpenAI TTS with voice selection and expressive speech processing
+- **Text-to-Speech**: OpenAI TTS with multi-language support, play/pause controls, audio download, and Tenglish (Telugu-English) voice processing
 
 ## Key Components
 
@@ -108,6 +108,7 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - June 29, 2025: Verified full system functionality (upload, chat, search)
 - June 29, 2025: Added TTS functionality using OpenAI TTS with voice selection and expressive speech processing
 - June 30, 2025: Enhanced mobile responsiveness with touch-friendly controls, sidebar navigation, and optimized layouts for all screen sizes
+- June 30, 2025: Added advanced TTS features with play/pause controls, audio download capability, and multi-language support including Tenglish (Telugu-English mix)
 
 ## User Preferences
 

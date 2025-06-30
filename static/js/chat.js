@@ -51,7 +51,7 @@ class PDFChatApp {
         
         // TTS event listeners using event delegation
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tts-play-btn') || e.target.closest('.tts-play-btn')) {
+            if (e.target.classList.contains('tts-btn') || e.target.closest('.tts-btn')) {
                 this.handleTTSPlay(e);
             }
         });
@@ -236,20 +236,25 @@ class PDFChatApp {
         let ttsControlsHtml = '';
         if (type === 'assistant') {
             ttsControlsHtml = `
-                <div class="message-actions mt-2">
-                    <button class="btn btn-sm btn-outline-primary tts-play-btn" 
-                            data-message="${content.replace(/"/g, '&quot;')}" 
-                            title="Play with voice">
-                        <i class="fas fa-play me-1"></i>Play
-                    </button>
-                    <select class="form-select form-select-sm d-inline-block w-auto ms-2 voice-select">
-                        <option value="nova" selected>Nova (Recommended for Students)</option>
-                        <option value="alloy">Alloy (Clear & Neutral)</option>
-                        <option value="shimmer">Shimmer (Friendly Female)</option>
-                        <option value="echo">Echo (Male Teacher)</option>
-                        <option value="fable">Fable (British Accent)</option>
-                        <option value="onyx">Onyx (Deep Male)</option>
-                    </select>
+                <div class="tts-controls mt-2" data-message="${content.replace(/"/g, '&quot;')}">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button class="btn btn-sm btn-outline-primary tts-btn tts-play-btn" 
+                                title="Play with voice">
+                            <i class="fas fa-play me-1"></i>Play
+                        </button>
+                        <button class="btn btn-sm btn-outline-success tts-btn tts-download-btn" 
+                                title="Download audio">
+                            <i class="fas fa-download me-1"></i>Download
+                        </button>
+                        <select class="form-select form-select-sm voice-select" style="min-width: 180px;">
+                            <option value="nova_indian" selected>Nova (Indian English)</option>
+                            <option value="shimmer_tenglish">Shimmer (Tenglish)</option>
+                            <option value="echo_hindi">Echo (Hindi-English)</option>
+                            <option value="alloy_english">Alloy (American English)</option>
+                            <option value="fable_tamil">Fable (Tamil-English)</option>
+                            <option value="onyx_formal">Onyx (Formal English)</option>
+                        </select>
+                    </div>
                 </div>
             `;
         }
@@ -405,25 +410,30 @@ class PDFChatApp {
     
     async handleTTSPlay(e) {
         e.preventDefault();
-        const button = e.target.closest('.tts-play-btn');
-        const messageText = button.dataset.message;
-        const voiceSelect = button.parentElement.querySelector('.voice-select');
-        const selectedVoice = voiceSelect.value;
+        const button = e.target.closest('.tts-btn');
+        const isPlayButton = button.classList.contains('tts-play-btn');
+        const isDownloadButton = button.classList.contains('tts-download-btn');
+        const controlsDiv = button.closest('.tts-controls');
+        const messageText = controlsDiv.dataset.message;
+        const voiceSelect = controlsDiv.querySelector('.voice-select');
+        const selectedVoice = voiceSelect ? voiceSelect.value : 'nova_indian';
         
-        // Stop current audio if playing
-        if (this.currentAudio && !this.currentAudio.paused) {
-            this.currentAudio.pause();
-            this.currentAudio = null;
-            // Reset all play buttons
-            document.querySelectorAll('.tts-play-btn').forEach(btn => {
-                btn.innerHTML = '<i class="fas fa-play me-1"></i>Play';
-                btn.disabled = false;
-            });
+        if (isDownloadButton) {
+            // Handle download
+            await this.downloadTTSAudio(messageText, selectedVoice, button);
+            return;
         }
         
-        // Update button state
-        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
-        button.disabled = true;
+        // Handle play/pause
+        if (this.currentAudio && !this.currentAudio.paused) {
+            // Pause current audio
+            this.currentAudio.pause();
+            this.updateTTSButtonState(button, 'play');
+            return;
+        }
+        
+        // Update button state to loading
+        this.updateTTSButtonState(button, 'loading');
         
         try {
             const response = await fetch('/tts', {
@@ -434,7 +444,7 @@ class PDFChatApp {
                 body: JSON.stringify({
                     text: messageText,
                     voice: selectedVoice,
-                    emotion: 'explanatory'
+                    download: false
                 })
             });
             
@@ -473,6 +483,97 @@ class PDFChatApp {
             
             // Show error message
             this.showUploadStatus('Voice playback failed. Please try again.', 'error');
+        }
+    }
+    
+    async downloadTTSAudio(messageText, selectedVoice, button) {
+        this.updateDownloadButtonState(button, 'loading');
+        
+        try {
+            const response = await fetch('/tts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: messageText,
+                    voice: selectedVoice,
+                    download: true
+                })
+            });
+            
+            if (response.ok) {
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Create download link
+                const downloadLink = document.createElement('a');
+                downloadLink.href = audioUrl;
+                downloadLink.download = `tts_audio_${selectedVoice}_${Date.now()}.mp3`;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                URL.revokeObjectURL(audioUrl);
+                this.updateDownloadButtonState(button, 'success');
+                
+                setTimeout(() => {
+                    this.updateDownloadButtonState(button, 'download');
+                }, 2000);
+            } else {
+                throw new Error('Failed to download audio');
+            }
+        } catch (error) {
+            console.error('Download error:', error);
+            this.updateDownloadButtonState(button, 'error');
+            setTimeout(() => {
+                this.updateDownloadButtonState(button, 'download');
+            }, 2000);
+        }
+    }
+    
+    updateTTSButtonState(button, state) {
+        if (!button) return;
+        
+        button.disabled = false;
+        switch (state) {
+            case 'play':
+                button.innerHTML = '<i class="fas fa-play me-1"></i>Play';
+                break;
+            case 'pause':
+                button.innerHTML = '<i class="fas fa-pause me-1"></i>Pause';
+                break;
+            case 'loading':
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+                button.disabled = true;
+                break;
+            case 'error':
+                button.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Error';
+                button.disabled = true;
+                break;
+        }
+    }
+    
+    updateDownloadButtonState(button, state) {
+        if (!button) return;
+        
+        button.disabled = false;
+        switch (state) {
+            case 'download':
+                button.innerHTML = '<i class="fas fa-download me-1"></i>Download';
+                break;
+            case 'loading':
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Downloading...';
+                button.disabled = true;
+                break;
+            case 'success':
+                button.innerHTML = '<i class="fas fa-check me-1"></i>Downloaded';
+                button.disabled = true;
+                break;
+            case 'error':
+                button.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Error';
+                button.disabled = true;
+                break;
         }
     }
     

@@ -3,7 +3,7 @@ import uuid
 import json
 import logging
 import tempfile
-from flask import render_template, request, jsonify, session, redirect, url_for, flash, Response, send_from_directory
+from flask import render_template, request, jsonify, session, redirect, url_for, flash, Response, send_from_directory, make_response
 from werkzeug.utils import secure_filename
 from app import app, db
 from models import Document, ChatMessage
@@ -268,45 +268,53 @@ import time
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():
-    """Convert text to speech using OpenAI TTS."""
+    """Convert text to speech using OpenAI TTS with language support."""
     try:
         data = request.get_json()
-        text = data.get('text', '')
-        voice = data.get('voice', 'alloy')
-        emotion = data.get('emotion', 'neutral')
+        text = data.get('text', '').strip()
+        voice_id = data.get('voice', 'nova_indian')
+        download = data.get('download', False)
         
         if not text:
-            return jsonify({'error': 'Text is required'}), 400
+            return jsonify({'error': 'No text provided'}), 400
         
-        # Create expressive speech
-        audio_data = tts_service.create_expressive_speech_sync(text, voice, emotion)
+        if len(text) > 4096:
+            return jsonify({'error': 'Text too long (max 4096 characters)'}), 400
         
-        # Save to temporary file
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
-        temp_file.write(audio_data)
-        temp_file.close()
+        # Get voice configuration from available voices
+        available_voices = tts_service.get_available_voices()
+        voice_config = next((v for v in available_voices if v['id'] == voice_id), available_voices[1])
         
-        # Return audio file
-        def remove_file():
-            try:
-                os.unlink(temp_file.name)
-            except:
-                pass
+        actual_voice = voice_config.get('voice', 'nova')
+        language = voice_config.get('language', 'indian_english')
         
-        return send_from_directory(
-            os.path.dirname(temp_file.name), 
-            os.path.basename(temp_file.name),
-            as_attachment=False,
-            mimetype='audio/mpeg'
+        # Use expressive speech with language support
+        audio_data = tts_service.create_expressive_speech_sync(
+            text=text,
+            voice=actual_voice,
+            emotion="enthusiastic",
+            language=language
         )
+        
+        response = make_response(audio_data)
+        response.headers['Content-Type'] = 'audio/mp3'
+        
+        if download:
+            # For download requests
+            response.headers['Content-Disposition'] = f'attachment; filename="tts_audio_{voice_id}.mp3"'
+        else:
+            # For inline playback
+            response.headers['Content-Disposition'] = 'inline; filename="speech.mp3"'
+        
+        return response
         
     except Exception as e:
         logger.error(f"TTS error: {e}")
-        return jsonify({'error': 'TTS conversion failed'}), 500
+        return jsonify({'error': 'Text-to-speech conversion failed'}), 500
 
 @app.route('/tts/voices', methods=['GET'])
 def get_voices():
-    """Get available TTS voices."""
+    """Get available TTS voices with language options."""
     try:
         voices = tts_service.get_available_voices()
         return jsonify(voices)

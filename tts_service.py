@@ -50,14 +50,50 @@ class TTSService:
             raise
     
     def get_available_voices(self) -> list:
-        """Get list of available voices with descriptions."""
+        """Get list of available voices with language options."""
         return [
-            {"id": "alloy", "name": "Alloy", "description": "Neutral, balanced tone"},
-            {"id": "echo", "name": "Echo", "description": "Male, clear voice"},
-            {"id": "fable", "name": "Fable", "description": "British accent"},
-            {"id": "onyx", "name": "Onyx", "description": "Deep male voice"},
-            {"id": "nova", "name": "Nova", "description": "Female, warm tone"},
-            {"id": "shimmer", "name": "Shimmer", "description": "Female, bright tone"}
+            {
+                "id": "alloy_english", 
+                "name": "Alloy (English)", 
+                "description": "Balanced and clear American English",
+                "voice": "alloy",
+                "language": "english"
+            },
+            {
+                "id": "nova_indian", 
+                "name": "Nova (Indian English)", 
+                "description": "Energetic and bright with Indian accent",
+                "voice": "nova",
+                "language": "indian_english"
+            },
+            {
+                "id": "shimmer_tenglish", 
+                "name": "Shimmer (Tenglish)", 
+                "description": "Telugu-English mix, gentle and soothing",
+                "voice": "shimmer",
+                "language": "tenglish"
+            },
+            {
+                "id": "echo_hindi", 
+                "name": "Echo (Hindi-English)", 
+                "description": "Warm and friendly Hindi-English mix",
+                "voice": "echo",
+                "language": "hindi_english"
+            },
+            {
+                "id": "fable_tamil", 
+                "name": "Fable (Tamil-English)", 
+                "description": "Expressive Tamil-English storytelling",
+                "voice": "fable",
+                "language": "tamil_english"
+            },
+            {
+                "id": "onyx_formal", 
+                "name": "Onyx (Formal English)", 
+                "description": "Deep and authoritative formal English",
+                "voice": "onyx",
+                "language": "formal_english"
+            }
         ]
     
     def save_audio_to_file(self, audio_data: bytes, filename: Optional[str] = None) -> str:
@@ -88,13 +124,13 @@ class TTSService:
             raise
     
     def create_expressive_speech(self, text: str, voice: str = "nova", 
-                               emotion: str = "neutral") -> bytes:
+                               emotion: str = "neutral", language: str = "english") -> bytes:
         """
         Create expressive speech by preprocessing text for better expression.
         """
         try:
-            # Add expression markers based on content
-            processed_text = self._add_expression_markers(text, emotion)
+            # Add expression markers based on content and language
+            processed_text = self._add_expression_markers(text, emotion, language)
             
             # Generate speech with processed text
             audio_data = self.text_to_speech(processed_text, voice)
@@ -104,7 +140,7 @@ class TTSService:
             logger.error(f"Error creating expressive speech: {e}")
             raise
     
-    def _add_expression_markers(self, text: str, emotion: str = "neutral") -> str:
+    def _add_expression_markers(self, text: str, emotion: str = "neutral", language: str = "english") -> str:
         """
         Add expression markers optimized for Indian English and Telugu-speaking teens.
         Makes speech clearer and more culturally appropriate.
@@ -112,20 +148,66 @@ class TTSService:
         # Clean up text formatting
         processed_text = text.replace("**", "").replace("*", "")
         
-        # Replace complex words with simpler Indian English alternatives
-        word_replacements = {
-            "utilize": "use",
-            "demonstrate": "show",
-            "subsequently": "then",
-            "furthermore": "also",
-            "therefore": "so",
-            "however": "but",
-            "nevertheless": "still",
-            "approximately": "about",
-            "specifically": "clearly",
-            "particularly": "especially"
-        }
+        # Language-specific processing
+        if language == "tenglish":
+            # Telugu-English mixed replacements
+            word_replacements = {
+                "good": "baagundu",
+                "yes": "avunu", 
+                "no": "ledu",
+                "understand": "ardham ayindi",
+                "learn": "nerchukondi",
+                "study": "chaduvukondi",
+                "great": "chala baagundu",
+                "nice": "manchidi",
+                "API": "A-P-I api",
+                "PDF": "P-D-F file",
+                "database": "data-base lo",
+                "function": "function chesthe"
+            }
+            # Add Telugu-style encouraging phrases
+            if emotion == "enthusiastic":
+                processed_text = f"Waah! {processed_text} Chala baagundu!"
+                
+        elif language == "indian_english":
+            # Indian English specific replacements
+            word_replacements = {
+                "utilize": "use",
+                "demonstrate": "show", 
+                "subsequently": "then",
+                "furthermore": "also",
+                "therefore": "so",
+                "however": "but",
+                "awesome": "fantastic",
+                "cool": "nice",
+                "API": "A-P-I",
+                "PDF": "P-D-F document",
+                "algorithm": "algo-rhythm",
+                "schedule": "shed-yule"
+            }
+            if emotion == "enthusiastic":
+                processed_text = f"Very good! {processed_text} Keep it up!"
+                
+        else:
+            # Standard English replacements
+            word_replacements = {
+                "utilize": "use",
+                "demonstrate": "show",
+                "subsequently": "then", 
+                "furthermore": "also",
+                "therefore": "so",
+                "however": "but",
+                "nevertheless": "still",
+                "approximately": "about",
+                "API": "A-P-I",
+                "PDF": "P-D-F",
+                "URL": "U-R-L",
+                "SQL": "S-Q-L"
+            }
+            if emotion == "enthusiastic":
+                processed_text = "Great question! " + processed_text
         
+        # Apply word replacements
         for complex_word, simple_word in word_replacements.items():
             processed_text = processed_text.replace(complex_word, simple_word)
             processed_text = processed_text.replace(complex_word.capitalize(), simple_word.capitalize())
@@ -140,51 +222,6 @@ class TTSService:
         processed_text = processed_text.replace("• ", "First point, ")
         processed_text = processed_text.replace("- ", "Next point, ")
         
-        # Add friendly introductions suitable for Indian students
-        if emotion == "enthusiastic":
-            processed_text = "Great question! " + processed_text
-        elif emotion == "explanatory":
-            processed_text = "Let me help you understand this clearly. " + processed_text
-        
-        # Add familiar expressions for better connection with Telugu students
-        familiar_replacements = {
-            "Let me explain": "Let me tell you",
-            "As you can see": "You can see that",
-            "It is important to note": "Remember that",
-            "In conclusion": "So, to sum up",
-            "For example": "For instance",
-            "In other words": "That means"
-        }
-        
-        for formal_phrase, familiar_phrase in familiar_replacements.items():
-            processed_text = processed_text.replace(formal_phrase, familiar_phrase)
-        
-        # Add pronunciation helpers for technical terms
-        tech_pronunciations = {
-            "PDF": "P D F",
-            "API": "A P I",
-            "URL": "U R L",
-            "HTTP": "H T T P",
-            "HTML": "H T M L",
-            "CSS": "C S S"
-        }
-        
-        for term, pronunciation in tech_pronunciations.items():
-            processed_text = processed_text.replace(term, pronunciation)
-        
-        # Add educational context markers for better learning
-        educational_keywords = ['learn', 'study', 'understand', 'remember', 'important', 'concept', 'definition']
-        if any(word in processed_text.lower() for word in educational_keywords):
-            processed_text = "Pay attention. " + processed_text
-        
-        # Slow down technical explanations for better comprehension
-        if any(word in processed_text.lower() for word in ['algorithm', 'database', 'programming', 'technology']):
-            processed_text = "Now, let me explain this step by step. " + processed_text
-        
-        # Add encouraging phrases for Telugu students
-        if len(processed_text) > 200:  # For longer explanations
-            processed_text = processed_text + " I hope this helps you understand better."
-        
         return processed_text
 
 # Simple synchronous wrapper for Flask usage
@@ -197,9 +234,9 @@ class SimpleTTSWrapper:
         return self.tts_service.text_to_speech(text, voice)
     
     def create_expressive_speech_sync(self, text: str, voice: str = "nova", 
-                                    emotion: str = "neutral") -> bytes:
-        """Synchronous expressive TTS."""
-        return self.tts_service.create_expressive_speech(text, voice, emotion)
+                                    emotion: str = "neutral", language: str = "english") -> bytes:
+        """Synchronous expressive TTS with language support."""
+        return self.tts_service.create_expressive_speech(text, voice, emotion, language)
     
     def get_available_voices(self) -> list:
         """Get available voices."""
