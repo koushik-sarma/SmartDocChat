@@ -106,26 +106,84 @@ class TTSService:
     
     def _add_expression_markers(self, text: str, emotion: str = "neutral") -> str:
         """
-        Add SSML-like markers to enhance expression.
-        Note: OpenAI TTS doesn't support full SSML, but we can optimize text structure.
+        Add expression markers optimized for Indian English and Telugu-speaking teens.
+        Makes speech clearer and more culturally appropriate.
         """
         # Clean up text formatting
         processed_text = text.replace("**", "").replace("*", "")
         
-        # Add natural pauses for better flow
-        processed_text = processed_text.replace(". ", "... ")
+        # Replace complex words with simpler Indian English alternatives
+        word_replacements = {
+            "utilize": "use",
+            "demonstrate": "show",
+            "subsequently": "then",
+            "furthermore": "also",
+            "therefore": "so",
+            "however": "but",
+            "nevertheless": "still",
+            "approximately": "about",
+            "specifically": "clearly",
+            "particularly": "especially"
+        }
+        
+        for complex_word, simple_word in word_replacements.items():
+            processed_text = processed_text.replace(complex_word, simple_word)
+            processed_text = processed_text.replace(complex_word.capitalize(), simple_word.capitalize())
+        
+        # Add natural pauses for better comprehension
+        processed_text = processed_text.replace(". ", ". ")
         processed_text = processed_text.replace("! ", "! ")
         processed_text = processed_text.replace("? ", "? ")
+        processed_text = processed_text.replace(", ", ", ")
         
-        # Handle lists and bullet points
-        processed_text = processed_text.replace("• ", "First, ")
-        processed_text = processed_text.replace("- ", "Next, ")
+        # Handle lists with clear enumeration
+        processed_text = processed_text.replace("• ", "First point, ")
+        processed_text = processed_text.replace("- ", "Next point, ")
         
-        # Add enthusiasm for positive content
+        # Add friendly introductions suitable for Indian students
         if emotion == "enthusiastic":
-            processed_text = "Here's what I found! " + processed_text
+            processed_text = "Great question! " + processed_text
         elif emotion == "explanatory":
-            processed_text = "Let me explain this for you. " + processed_text
+            processed_text = "Let me help you understand this clearly. " + processed_text
+        
+        # Add familiar expressions for better connection with Telugu students
+        familiar_replacements = {
+            "Let me explain": "Let me tell you",
+            "As you can see": "You can see that",
+            "It is important to note": "Remember that",
+            "In conclusion": "So, to sum up",
+            "For example": "For instance",
+            "In other words": "That means"
+        }
+        
+        for formal_phrase, familiar_phrase in familiar_replacements.items():
+            processed_text = processed_text.replace(formal_phrase, familiar_phrase)
+        
+        # Add pronunciation helpers for technical terms
+        tech_pronunciations = {
+            "PDF": "P D F",
+            "API": "A P I",
+            "URL": "U R L",
+            "HTTP": "H T T P",
+            "HTML": "H T M L",
+            "CSS": "C S S"
+        }
+        
+        for term, pronunciation in tech_pronunciations.items():
+            processed_text = processed_text.replace(term, pronunciation)
+        
+        # Add educational context markers for better learning
+        educational_keywords = ['learn', 'study', 'understand', 'remember', 'important', 'concept', 'definition']
+        if any(word in processed_text.lower() for word in educational_keywords):
+            processed_text = "Pay attention. " + processed_text
+        
+        # Slow down technical explanations for better comprehension
+        if any(word in processed_text.lower() for word in ['algorithm', 'database', 'programming', 'technology']):
+            processed_text = "Now, let me explain this step by step. " + processed_text
+        
+        # Add encouraging phrases for Telugu students
+        if len(processed_text) > 200:  # For longer explanations
+            processed_text = processed_text + " I hope this helps you understand better."
         
         return processed_text
 

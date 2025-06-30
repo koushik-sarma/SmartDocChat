@@ -110,3 +110,8 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Voice customization preferences:
+- Indian English pronunciation for clarity
+- Optimized for Telugu-speaking teenagers 
+- Smooth and easy to understand speech patterns
+- Educational content with encouraging phrases
