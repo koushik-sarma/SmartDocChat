@@ -274,7 +274,14 @@ def clear_chat():
     try:
         session_id = session.get('session_id')
         if not session_id:
-            return jsonify({'error': 'No active session'}), 400
+            # Create new session if none exists
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
+            return jsonify({
+                'success': True,
+                'message': 'No chat history to clear.',
+                'messages_deleted': 0
+            })
         
         # Delete chat messages for this session
         message_count = ChatMessage.query.filter_by(session_id=session_id).count()
@@ -369,7 +376,9 @@ def user_profile():
     try:
         session_id = session.get('session_id')
         if not session_id:
-            return jsonify({'error': 'No active session'}), 400
+            # Create new session if none exists
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
         
         from models import UserProfile
         

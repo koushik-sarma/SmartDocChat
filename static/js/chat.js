@@ -125,6 +125,7 @@ class PDFChatApp {
             const response = await fetch('/documents');
             if (response.ok) {
                 const documents = await response.json();
+                console.log('Loaded documents:', documents);
                 
                 // Clear existing documents list to avoid duplicates
                 this.documentsList.innerHTML = '';
@@ -136,6 +137,10 @@ class PDFChatApp {
                 
                 this.updateDocumentCount();
                 this.updateInputState();
+                
+                console.log('Documents loaded, input enabled:', documents.length > 0);
+            } else {
+                console.error('Failed to load documents:', response.status);
             }
         } catch (error) {
             console.error('Error loading documents:', error);
