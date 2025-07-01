@@ -69,8 +69,14 @@
                         
                         <!-- AI Role -->
                         <div class="mb-3">
-                            <label for="aiRole" class="form-label small fw-bold">AI Personality</label>
-                            <select class="form-select form-select-sm" id="aiRole">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label for="aiRole" class="form-label small fw-bold mb-0">AI Personality</label>
+                                <button type="button" id="refreshResponseBtn" class="btn btn-outline-primary btn-sm" 
+                                        title="Refresh latest response with selected personality" style="display: none;">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                            <select class="form-select form-select-sm mt-2" id="aiRole">
                                 <option value="You are a helpful AI assistant.">Default Assistant</option>
                                 <option value="You are an experienced Teacher in English language. Explain concepts clearly with examples, ask clarifying questions, and encourage learning like a patient school teacher would.">English Teacher</option>
                                 <option value="You are a technical expert with deep knowledge. Provide detailed, accurate information with technical insights and thorough explanations.">Technical Expert</option>

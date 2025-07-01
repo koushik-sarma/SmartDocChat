@@ -166,16 +166,44 @@ class DocumentProcessor:
                 raise ValueError(f"Failed to process text file: {str(e)}")
     
     def _clean_text(self, text: str) -> str:
-        """Clean extracted text by removing excessive whitespace and formatting."""
+        """Clean extracted text while preserving chemical equations and special characters."""
         import re
+        
+        # Convert Unicode special characters first
+        text = self._convert_special_characters(text)
         
         # Remove excessive whitespace
         text = re.sub(r'\s+', ' ', text)
         
-        # Remove control characters
-        text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+        # Only remove non-printable control characters, keep special chars
+        text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
         
         return text.strip()
+    
+    def _convert_special_characters(self, text: str) -> str:
+        """Convert Unicode superscripts, subscripts, and special characters to readable format."""
+        # Chemical formula mappings
+        subscript_map = {
+            '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9',
+            'ₐ': 'a', 'ₑ': 'e', 'ᵢ': 'i', 'ₒ': 'o', 'ᵤ': 'u', 'ₓ': 'x', 'ₙ': 'n', 'ₘ': 'm', 'ₚ': 'p', 'ₛ': 's', 'ₜ': 't'
+        }
+        
+        superscript_map = {
+            '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9',
+            'ᵃ': 'a', 'ᵇ': 'b', 'ᶜ': 'c', 'ᵈ': 'd', 'ᵉ': 'e', 'ᶠ': 'f', 'ᵍ': 'g', 'ʰ': 'h', 'ⁱ': 'i', 'ʲ': 'j',
+            'ᵏ': 'k', 'ˡ': 'l', 'ᵐ': 'm', 'ⁿ': 'n', 'ᵒ': 'o', 'ᵖ': 'p', 'ʳ': 'r', 'ˢ': 's', 'ᵗ': 't', 'ᵘ': 'u',
+            'ᵛ': 'v', 'ʷ': 'w', 'ˣ': 'x', 'ʸ': 'y', 'ᶻ': 'z', '⁺': '+', '⁻': '-', '⁼': '='
+        }
+        
+        # Apply subscript conversions with underscore notation
+        for sub, normal in subscript_map.items():
+            text = text.replace(sub, f'_{normal}')
+        
+        # Apply superscript conversions with caret notation
+        for sup, normal in superscript_map.items():
+            text = text.replace(sup, f'^{normal}')
+        
+        return text
     
     def get_document_info(self, file_path: str) -> dict:
         """Get basic information about the document."""

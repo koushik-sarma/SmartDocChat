@@ -127,6 +127,10 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - July 1, 2025: Fixed document controls disappearing on page refresh - delete/toggle buttons now persist
 - July 1, 2025: Enhanced PDF image extraction with comprehensive debugging and automatic trigger
 - July 1, 2025: Updated frontend to display extracted PDF images in chat with click-to-expand functionality
+- July 1, 2025: Completely resolved PDF upload crash with smart processing system (>30MB auto-switches to PyMuPDF)
+- July 1, 2025: Enhanced chemical equation parsing with subscript/superscript support and special character preservation
+- July 1, 2025: Added AI personality refresh button with real-time response regeneration capability
+- July 1, 2025: Implemented comprehensive formatting for chemistry and physics content with proper visual styling
 
 ## Phase 1 Complete - Checkpoint
 Successfully implemented comprehensive PDF chat application with:

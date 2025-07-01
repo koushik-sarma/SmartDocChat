@@ -402,15 +402,59 @@ class PDFChatApp {
         
         this.chatMessages.appendChild(messageDiv);
         this.scrollToBottom();
+        
+        // Update refresh button visibility when assistant messages are added
+        if (type === 'assistant') {
+            this.updateRefreshButtonVisibility();
+        }
     }
     
     formatMessageContent(content) {
         // Convert markdown-like formatting to HTML
-        return content
+        let formatted = content
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/📘/g, '<i class="fas fa-book text-warning"></i>')
             .replace(/🌐/g, '<i class="fas fa-globe text-info"></i>')
             .replace(/\n/g, '<br>');
+        
+        // Convert chemical equation formatting
+        formatted = this.formatChemicalEquations(formatted);
+        
+        return formatted;
+    }
+    
+    formatChemicalEquations(content) {
+        // Convert underscore notation to subscripts (H_2O becomes H₂O)
+        content = content.replace(/([A-Za-z])_(\d+)/g, '$1<sub>$2</sub>');
+        content = content.replace(/([A-Za-z])_([a-z])/g, '$1<sub>$2</sub>');
+        
+        // Convert caret notation to superscripts (x^2 becomes x²)
+        content = content.replace(/([A-Za-z0-9])\\^(\d+)/g, '$1<sup>$2</sup>');
+        content = content.replace(/([A-Za-z0-9])\\^([+-])/g, '$1<sup>$2</sup>');
+        
+        // Handle common chemical reaction arrows
+        content = content.replace(/→/g, '<span class="reaction-arrow">→</span>');
+        content = content.replace(/←/g, '<span class="reaction-arrow">←</span>');
+        content = content.replace(/↔/g, '<span class="reaction-arrow">↔</span>');
+        content = content.replace(/⇌/g, '<span class="reaction-arrow">⇌</span>');
+        content = content.replace(/ -> /g, ' <span class="reaction-arrow">→</span> ');
+        content = content.replace(/ <- /g, ' <span class="reaction-arrow">←</span> ');
+        content = content.replace(/ <-> /g, ' <span class="reaction-arrow">↔</span> ');
+        content = content.replace(/ <=> /g, ' <span class="reaction-arrow">⇌</span> ');
+        
+        // Highlight Greek letters and special symbols
+        content = content.replace(/\b(alpha|beta|gamma|delta|epsilon|lambda|mu|pi|sigma|theta|phi|omega)\b/gi, '<span class="greek-letter">$1</span>');
+        content = content.replace(/\b(α|β|γ|δ|ε|λ|μ|π|σ|θ|φ|ω|Δ|Ω)\b/g, '<span class="greek-letter">$1</span>');
+        
+        // Highlight common chemistry terms and formulas
+        content = content.replace(/\b([A-Z][a-z]?(?:<sub>\d+</sub>)*(?:<sup>[+-]?\d*</sup>)*)\b/g, '<span class="chemical-formula">$1</span>');
+        
+        // Special symbols
+        content = content.replace(/±/g, '<span class="symbol">±</span>');
+        content = content.replace(/°/g, '<span class="symbol">°</span>');
+        content = content.replace(/∞/g, '<span class="symbol">∞</span>');
+        
+        return content;
     }
     
     addDocumentToList(docData) {
@@ -891,6 +935,14 @@ class PDFChatApp {
             });
         }
         
+        // Refresh Response Button
+        const refreshResponseBtn = document.getElementById('refreshResponseBtn');
+        if (refreshResponseBtn) {
+            refreshResponseBtn.addEventListener('click', () => {
+                this.refreshLatestResponse();
+            });
+        }
+        
         // Theme Toggle
         const darkTheme = document.getElementById('darkTheme');
         const lightTheme = document.getElementById('lightTheme');
@@ -1139,6 +1191,90 @@ class PDFChatApp {
                 this.showTyping(false);
                 this.showError('Failed to regenerate response: ' + error.message);
             });
+        }
+    }
+    
+    refreshLatestResponse() {
+        // Show refresh button as loading
+        const refreshBtn = document.getElementById('refreshResponseBtn');
+        if (refreshBtn) {
+            const originalHTML = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+            refreshBtn.disabled = true;
+            
+            // Find and regenerate the last response
+            const messages = document.querySelectorAll('.message');
+            let lastUserMessage = null;
+            
+            for (let i = messages.length - 1; i >= 0; i--) {
+                if (messages[i].classList.contains('user')) {
+                    lastUserMessage = messages[i];
+                    break;
+                }
+            }
+            
+            if (lastUserMessage) {
+                const messageText = lastUserMessage.querySelector('.message-text').textContent;
+                
+                // Remove the last assistant response if it exists
+                const lastAssistantMessage = document.querySelector('.message.assistant:last-of-type');
+                if (lastAssistantMessage) {
+                    lastAssistantMessage.remove();
+                }
+                
+                // Show typing indicator
+                this.showTyping(true);
+                
+                // Send the message again with new AI personality
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: messageText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    this.showTyping(false);
+                    if (data.error) {
+                        this.showError(data.error);
+                    } else {
+                        this.addMessageToChat('assistant', data.response, data.sources);
+                        this.scrollToBottom();
+                    }
+                })
+                .catch(error => {
+                    this.showTyping(false);
+                    console.error('Refresh error:', error);
+                    this.showError('Failed to refresh response');
+                })
+                .finally(() => {
+                    // Restore button
+                    if (refreshBtn) {
+                        refreshBtn.innerHTML = originalHTML;
+                        refreshBtn.disabled = false;
+                    }
+                });
+            } else {
+                // No user message found, restore button
+                refreshBtn.innerHTML = originalHTML;
+                refreshBtn.disabled = false;
+                this.showError('No previous message to refresh');
+            }
+        }
+    }
+    
+    updateRefreshButtonVisibility() {
+        const refreshBtn = document.getElementById('refreshResponseBtn');
+        const messages = document.querySelectorAll('.message.assistant');
+        
+        if (refreshBtn) {
+            // Show button only if there are assistant messages
+            if (messages.length > 0) {
+                refreshBtn.style.display = 'inline-block';
+            } else {
+                refreshBtn.style.display = 'none';
+            }
         }
     }
 }

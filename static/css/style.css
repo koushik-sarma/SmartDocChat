@@ -432,3 +432,78 @@ body.sidebar-open {
         font-size: 16px !important;
     }
 }
+
+/* Chemical equation and special character formatting */
+.message-text {
+    /* Enable proper chemical equation display */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+}
+
+/* Subscript and superscript styling for chemical formulas */
+.message-text sub,
+.message-text sup {
+    font-size: 0.75em;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+}
+
+.message-text sub {
+    bottom: -0.25em;
+}
+
+.message-text sup {
+    top: -0.5em;
+}
+
+/* Chemical equation patterns - convert underscore notation to subscripts */
+.message-text .chemical-formula {
+    font-family: 'Times New Roman', Times, serif;
+    font-weight: normal;
+}
+
+/* Arrow symbols for chemical reactions */
+.message-text .reaction-arrow {
+    margin: 0 8px;
+    font-size: 1.1em;
+    color: var(--bs-success);
+}
+
+/* Special characters styling */
+.message-text .greek-letter {
+    font-style: italic;
+    color: var(--bs-info);
+}
+
+/* Math and chemistry symbols */
+.message-text .symbol {
+    font-weight: bold;
+    color: var(--bs-warning);
+}
+
+/* Improved readability for formulas in dark mode */
+[data-bs-theme="dark"] .message-text .chemical-formula {
+    color: #e9ecef;
+}
+
+[data-bs-theme="dark"] .message-text .reaction-arrow {
+    color: #20c997;
+}
+
+[data-bs-theme="dark"] .message-text .greek-letter {
+    color: #0dcaf0;
+}
+
+/* Light mode formula styling */
+[data-bs-theme="light"] .message-text .chemical-formula {
+    color: #212529;
+}
+
+[data-bs-theme="light"] .message-text .reaction-arrow {
+    color: #198754;
+}
+
+[data-bs-theme="light"] .message-text .greek-letter {
+    color: #0d6efd;
+}
