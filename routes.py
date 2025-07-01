@@ -6,7 +6,8 @@ import tempfile
 from flask import render_template, request, jsonify, session, redirect, url_for, flash, Response, send_from_directory, make_response
 from werkzeug.utils import secure_filename
 from app import app, db
-from models import Document, ChatMessage
+from models import Document, ChatMessage, UserProfile
+from datetime import datetime
 from pdf_processor import PDFProcessor
 from chat_service import ChatService
 from tts_service import SimpleTTSWrapper
@@ -172,9 +173,13 @@ def chat():
         )
         db.session.add(user_msg)
         
+        # Get user's AI role preference
+        profile = UserProfile.query.filter_by(session_id=session_id).first()
+        ai_role = profile.ai_role if profile else None
+        
         # Generate response
         try:
-            response_text, sources = chat_service.generate_response(user_message, session_id)
+            response_text, sources = chat_service.generate_response(user_message, session_id, ai_role)
             
             # Save assistant response
             assistant_msg = ChatMessage(
@@ -313,6 +318,56 @@ def toggle_document(doc_id):
         })
     except Exception as e:
         logger.error(f"Error toggling document: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/profile', methods=['GET', 'POST'])
+def user_profile():
+    """Manage user profile settings."""
+    try:
+        session_id = session.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No active session'}), 400
+        
+        from models import UserProfile
+        
+        if request.method == 'GET':
+            # Get current profile
+            profile = UserProfile.query.filter_by(session_id=session_id).first()
+            if not profile:
+                # Create default profile
+                profile = UserProfile(session_id=session_id)
+                db.session.add(profile)
+                db.session.commit()
+            
+            return jsonify(profile.to_dict())
+        
+        elif request.method == 'POST':
+            # Update profile
+            data = request.get_json()
+            profile = UserProfile.query.filter_by(session_id=session_id).first()
+            
+            if not profile:
+                profile = UserProfile(session_id=session_id)
+                db.session.add(profile)
+            
+            # Update fields
+            if 'ai_role' in data:
+                profile.ai_role = data['ai_role']
+            if 'theme_preference' in data:
+                profile.theme_preference = data['theme_preference']
+            if 'voice_enabled' in data:
+                profile.voice_enabled = data['voice_enabled']
+            
+            profile.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            return jsonify({
+                'message': 'Profile updated successfully',
+                'profile': profile.to_dict()
+            })
+            
+    except Exception as e:
+        logger.error(f"Error managing profile: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/stats')

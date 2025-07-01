@@ -30,7 +30,7 @@ class ChatService:
             logger.error(f"Error processing PDF chunks: {e}")
             raise
     
-    def generate_response(self, query: str, session_id: str) -> Tuple[str, List[Dict]]:
+    def generate_response(self, query: str, session_id: str, ai_role: str = None) -> Tuple[str, List[Dict]]:
         """
         Generate a response combining PDF content and web search results.
         Returns the response text and a list of sources.
@@ -77,7 +77,19 @@ class ChatService:
             # 3. Generate response using OpenAI
             context = "\n\n".join(context_parts) if context_parts else "No specific context found."
             
-            system_prompt = """You are a helpful AI assistant that answers questions using information from PDF documents and web search results. 
+            # Use role-based system prompt if provided
+            if ai_role:
+                system_prompt = f"""{ai_role}
+
+When answering questions:
+1. Stay true to your assigned role and personality throughout the response
+2. Use the provided context from PDF documents and web search
+3. Clearly indicate which parts come from PDF documents (📘) vs web search (🌐)
+4. If you're a teacher, explain with examples and ask clarifying questions
+5. If you're an expert, provide detailed technical insights
+6. Maintain your character while being helpful and informative"""
+            else:
+                system_prompt = """You are a helpful AI assistant that answers questions using information from PDF documents and web search results. 
 
 Instructions:
 1. Use the provided context to answer the user's question

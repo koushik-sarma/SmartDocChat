@@ -43,6 +43,55 @@
                         <div id="uploadStatus" class="mt-2"></div>
                     </div>
                     
+                    <!-- Settings Panel (Phase 2) -->
+                    <div class="p-3 border-bottom">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">
+                                <i class="fas fa-cog me-2"></i>Settings
+                            </h6>
+                        </div>
+                        
+                        <!-- Theme Toggle -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Theme</label>
+                            <div class="btn-group btn-group-sm w-100" role="group">
+                                <input type="radio" class="btn-check" name="theme" id="darkTheme" checked>
+                                <label class="btn btn-outline-secondary" for="darkTheme">
+                                    <i class="fas fa-moon me-1"></i>Dark
+                                </label>
+                                <input type="radio" class="btn-check" name="theme" id="lightTheme">
+                                <label class="btn btn-outline-secondary" for="lightTheme">
+                                    <i class="fas fa-sun me-1"></i>Light
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Role -->
+                        <div class="mb-3">
+                            <label for="aiRole" class="form-label small fw-bold">AI Personality</label>
+                            <select class="form-select form-select-sm" id="aiRole">
+                                <option value="You are a helpful AI assistant.">Default Assistant</option>
+                                <option value="You are an experienced Teacher in English language. Explain concepts clearly with examples, ask clarifying questions, and encourage learning like a patient school teacher would.">English Teacher</option>
+                                <option value="You are a technical expert with deep knowledge. Provide detailed, accurate information with technical insights and thorough explanations.">Technical Expert</option>
+                                <option value="You are a friendly study tutor helping students learn. Break down complex topics into simple steps and provide encouraging guidance.">Study Tutor</option>
+                                <option value="custom">Custom Role...</option>
+                            </select>
+                            <textarea class="form-control form-control-sm mt-2" id="customRole" 
+                                     placeholder="Enter custom AI role (e.g., 'You are a creative writing coach who helps improve storytelling...')" 
+                                     style="display: none; resize: none;" rows="3"></textarea>
+                        </div>
+                        
+                        <!-- Voice Features -->
+                        <div class="mb-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="voiceInput">
+                                <label class="form-check-label small fw-bold" for="voiceInput">
+                                    <i class="fas fa-microphone me-1"></i>Voice Input
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Documents List -->
                     <div class="flex-grow-1 p-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">

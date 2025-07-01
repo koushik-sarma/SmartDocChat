@@ -79,6 +79,9 @@ class PDFChatApp {
             }
         });
         
+        // Phase 2 Settings Event Listeners
+        this.setupPhase2Features();
+        
         // Enable input when documents are present
         this.updateInputState();
     }
@@ -747,6 +750,227 @@ class PDFChatApp {
             const button = e.target.closest('.delete-doc-btn');
             button.disabled = false;
             button.innerHTML = '<i class="fas fa-trash"></i>';
+        }
+    }
+    
+    setupPhase2Features() {
+        // AI Role Selection
+        const aiRoleSelect = document.getElementById('aiRole');
+        const customRoleTextarea = document.getElementById('customRole');
+        
+        if (aiRoleSelect) {
+            aiRoleSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customRoleTextarea.style.display = 'block';
+                    customRoleTextarea.focus();
+                } else {
+                    customRoleTextarea.style.display = 'none';
+                    this.updateProfile({ ai_role: e.target.value });
+                }
+            });
+        }
+        
+        if (customRoleTextarea) {
+            customRoleTextarea.addEventListener('blur', () => {
+                if (customRoleTextarea.value.trim()) {
+                    this.updateProfile({ ai_role: customRoleTextarea.value.trim() });
+                }
+            });
+        }
+        
+        // Theme Toggle
+        const darkTheme = document.getElementById('darkTheme');
+        const lightTheme = document.getElementById('lightTheme');
+        
+        if (darkTheme && lightTheme) {
+            darkTheme.addEventListener('change', () => {
+                if (darkTheme.checked) {
+                    this.setTheme('dark');
+                    this.updateProfile({ theme_preference: 'dark' });
+                }
+            });
+            
+            lightTheme.addEventListener('change', () => {
+                if (lightTheme.checked) {
+                    this.setTheme('light');
+                    this.updateProfile({ theme_preference: 'light' });
+                }
+            });
+        }
+        
+        // Voice Input Toggle
+        const voiceInput = document.getElementById('voiceInput');
+        if (voiceInput) {
+            voiceInput.addEventListener('change', (e) => {
+                this.updateProfile({ voice_enabled: e.target.checked });
+                if (e.target.checked) {
+                    this.initializeVoiceInput();
+                } else {
+                    this.disableVoiceInput();
+                }
+            });
+        }
+        
+        // Load current profile settings
+        this.loadProfile();
+    }
+    
+    async loadProfile() {
+        try {
+            const response = await fetch('/profile');
+            if (response.ok) {
+                const profile = await response.json();
+                
+                // Set AI role
+                const aiRoleSelect = document.getElementById('aiRole');
+                const customRoleTextarea = document.getElementById('customRole');
+                
+                if (aiRoleSelect && profile.ai_role) {
+                    const matchingOption = Array.from(aiRoleSelect.options).find(
+                        option => option.value === profile.ai_role
+                    );
+                    
+                    if (matchingOption) {
+                        aiRoleSelect.value = profile.ai_role;
+                    } else {
+                        aiRoleSelect.value = 'custom';
+                        customRoleTextarea.style.display = 'block';
+                        customRoleTextarea.value = profile.ai_role;
+                    }
+                }
+                
+                // Set theme
+                if (profile.theme_preference === 'light') {
+                    document.getElementById('lightTheme').checked = true;
+                    this.setTheme('light');
+                } else {
+                    document.getElementById('darkTheme').checked = true;
+                    this.setTheme('dark');
+                }
+                
+                // Set voice input
+                const voiceInput = document.getElementById('voiceInput');
+                if (voiceInput && profile.voice_enabled) {
+                    voiceInput.checked = true;
+                    this.initializeVoiceInput();
+                }
+            }
+        } catch (error) {
+            console.error('Error loading profile:', error);
+        }
+    }
+    
+    async updateProfile(updates) {
+        try {
+            const response = await fetch('/profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updates)
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Profile updated:', result.message);
+            } else {
+                console.error('Failed to update profile');
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+        }
+    }
+    
+    setTheme(theme) {
+        const body = document.body;
+        const html = document.documentElement;
+        
+        if (theme === 'light') {
+            html.setAttribute('data-bs-theme', 'light');
+            body.classList.remove('dark-theme');
+            body.classList.add('light-theme');
+        } else {
+            html.setAttribute('data-bs-theme', 'dark');
+            body.classList.remove('light-theme');
+            body.classList.add('dark-theme');
+        }
+    }
+    
+    initializeVoiceInput() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            this.showUploadStatus('🎤 Voice input not supported in this browser', 'info');
+            return;
+        }
+        
+        try {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            this.recognition.continuous = false;
+            this.recognition.interimResults = false;
+            this.recognition.lang = 'en-US';
+            
+            this.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                this.messageInput.value = transcript;
+                this.messageInput.focus();
+            };
+            
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                this.showUploadStatus('🎤 Voice input error. Please try again.', 'error');
+            };
+            
+            // Add voice button to input area
+            this.addVoiceButton();
+            
+        } catch (error) {
+            console.error('Voice recognition setup error:', error);
+            this.showUploadStatus('🎤 Voice input setup failed', 'error');
+        }
+    }
+    
+    addVoiceButton() {
+        // Add voice button next to send button
+        const chatForm = document.getElementById('chatForm');
+        if (chatForm && !document.getElementById('voiceButton')) {
+            const voiceButton = document.createElement('button');
+            voiceButton.type = 'button';
+            voiceButton.id = 'voiceButton';
+            voiceButton.className = 'btn btn-outline-secondary ms-2';
+            voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
+            voiceButton.title = 'Voice Input';
+            
+            voiceButton.addEventListener('click', () => this.startVoiceRecognition());
+            
+            const sendButton = chatForm.querySelector('button[type="submit"]');
+            sendButton.parentNode.insertBefore(voiceButton, sendButton.nextSibling);
+        }
+    }
+    
+    startVoiceRecognition() {
+        if (this.recognition) {
+            const voiceButton = document.getElementById('voiceButton');
+            voiceButton.innerHTML = '<i class="fas fa-stop text-danger"></i>';
+            voiceButton.disabled = true;
+            
+            this.recognition.start();
+            
+            setTimeout(() => {
+                this.recognition.stop();
+                voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
+                voiceButton.disabled = false;
+            }, 5000); // Stop after 5 seconds
+        }
+    }
+    
+    disableVoiceInput() {
+        if (this.recognition) {
+            this.recognition = null;
+        }
+        
+        const voiceButton = document.getElementById('voiceButton');
+        if (voiceButton) {
+            voiceButton.remove();
         }
     }
 }

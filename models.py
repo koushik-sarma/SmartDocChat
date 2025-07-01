@@ -22,6 +22,26 @@ class Document(db.Model):
             'is_active': getattr(self, 'is_active', True)
         }
 
+class UserProfile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(255), nullable=False, unique=True)
+    ai_role = db.Column(db.Text, default="You are a helpful AI assistant.")
+    theme_preference = db.Column(db.String(50), default="dark")  # 'dark' or 'light'
+    voice_enabled = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'session_id': self.session_id,
+            'ai_role': self.ai_role,
+            'theme_preference': self.theme_preference,
+            'voice_enabled': self.voice_enabled,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.String(255), nullable=False)
@@ -29,6 +49,7 @@ class ChatMessage(db.Model):
     content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     sources = db.Column(db.Text)  # JSON string of sources
+    ai_role_used = db.Column(db.Text)  # Store the AI role used for this response
     
     def to_dict(self):
         return {
