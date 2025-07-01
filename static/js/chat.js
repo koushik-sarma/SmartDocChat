@@ -168,9 +168,13 @@ class PDFChatApp {
         
         console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
         
-        // Validate file type - be more specific about PDF validation
-        if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
-            this.showUploadStatus('Only PDF files are allowed', 'error');
+        // Validate file type - support multiple document formats
+        const allowedExtensions = ['.pdf', '.docx', '.txt', '.md'];
+        const fileName = file.name.toLowerCase();
+        const isValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+        
+        if (!isValidExtension) {
+            this.showUploadStatus('Only PDF, DOCX, TXT, and MD files are allowed', 'error');
             return;
         }
         
@@ -190,7 +194,7 @@ class PDFChatApp {
         formData.append('file', file);
         
         this.showUploadProgress(true);
-        this.showUploadStatus('Uploading and processing PDF...', 'info');
+        this.showUploadStatus('Uploading and processing document...', 'info');
         
         try {
             console.log('Starting upload request...');
@@ -203,11 +207,27 @@ class PDFChatApp {
             
             let result;
             try {
-                result = await response.json();
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+                
+                if (!responseText.trim()) {
+                    throw new Error('Empty response from server');
+                }
+                
+                result = JSON.parse(responseText);
                 console.log('Upload result:', result);
             } catch (parseError) {
                 console.error('Failed to parse response JSON:', parseError);
-                throw new Error('Invalid server response');
+                console.error('Response status:', response.status);
+                console.error('Response headers:', response.headers);
+                
+                if (response.status >= 500) {
+                    throw new Error('Server error occurred during upload');
+                } else if (response.status >= 400) {
+                    throw new Error(`Upload failed: HTTP ${response.status}`);
+                } else {
+                    throw new Error('Invalid server response format');
+                }
             }
             
             if (response.ok && result && result.message) {

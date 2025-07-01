@@ -53,7 +53,7 @@ def upload_file():
             return jsonify({'error': 'No file selected'}), 400
         
         if not allowed_file(file.filename):
-            return jsonify({'error': 'Only PDF files are allowed'}), 400
+            return jsonify({'error': 'Only PDF, DOCX, TXT, and MD files are allowed'}), 400
         
         # Ensure session ID exists
         if 'session_id' not in session:
@@ -78,26 +78,25 @@ def upload_file():
             logging.error(f"Failed to save file {file_path}: {str(e)}")
             raise ValueError(f"Failed to save uploaded file: {str(e)}")
         
-        # Process PDF
+        # Process document (PDF, DOCX, TXT, MD)
         try:
-            # Validate PDF file before processing
-            try:
-                pdf_info = pdf_processor.get_pdf_info(file_path)
-                if pdf_info['page_count'] == 0:
-                    raise ValueError("PDF file contains no readable pages")
-            except Exception as e:
-                raise ValueError(f"Invalid PDF file: {str(e)}")
+            # Use DocumentProcessor for multi-format support
+            doc_processor = DocumentProcessor()
+            
+            # Validate document file before processing
+            if not doc_processor.is_supported_format(file.filename):
+                raise ValueError("Unsupported file format")
             
             # Extract text chunks
             chunks = []
             try:
-                chunk_generator = pdf_processor.extract_text_chunks(file_path)
+                chunk_generator = doc_processor.extract_text_chunks(file_path)
                 chunks = list(chunk_generator)
             except Exception as e:
-                raise ValueError(f"Could not extract text from PDF: {str(e)}")
+                raise ValueError(f"Could not extract text from document: {str(e)}")
             
             if not chunks:
-                raise ValueError("No text content could be extracted from the PDF")
+                raise ValueError("No text content could be extracted from the document")
             
             # Save document record
             document = Document(
