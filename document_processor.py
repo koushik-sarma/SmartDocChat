@@ -71,7 +71,7 @@ class DocumentProcessor:
             logger.error(f"PDF extraction failed: {e}")
             # Fallback to PyMuPDF if available
             try:
-                import fitz
+                import pymupdf as fitz
                 doc = fitz.open(pdf_path)
                 current_chunk = ""
                 

@@ -261,6 +261,22 @@ class PDFChatApp {
                     sourcesHtml += '<div class="source-item"><i class="fas fa-file-pdf text-danger"></i> PDF Document</div>';
                 } else if (source.type === 'web') {
                     sourcesHtml += `<div class="source-item"><i class="fas fa-globe text-info"></i> ${source.title}</div>`;
+                } else if (source.type === 'image') {
+                    sourcesHtml += `
+                        <div class="source-item image-source mb-2">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fas fa-image text-primary me-2"></i>
+                                <small class="text-muted">
+                                    ${source.document} - Page ${source.page} 
+                                    (${source.width}x${source.height}, ${Math.round(source.size/1024)}KB)
+                                </small>
+                            </div>
+                            <img src="data:image/${source.format};base64,${source.image_data}" 
+                                 class="img-fluid rounded border" 
+                                 style="max-width: 300px; max-height: 200px; cursor: pointer;"
+                                 title="Click to view full size"
+                                 onclick="this.style.maxWidth=this.style.maxWidth==='none'?'300px':'none';this.style.maxHeight=this.style.maxHeight==='none'?'200px':'none';">
+                        </div>`;
                 }
             });
             sourcesHtml += '</div>';

@@ -65,6 +65,11 @@ class ChatService:
                         'content': f"Retrieved from {len(pdf_doc_ids)} PDF document(s)",
                         'document_count': len(pdf_doc_ids)
                     })
+                    
+                    # Extract images if query suggests image-related content
+                    image_keywords = ['image', 'picture', 'chart', 'graph', 'diagram', 'figure', 'photo', 'show me', 'display']
+                    if any(keyword in query.lower() for keyword in image_keywords):
+                        self._extract_relevant_images(pdf_doc_ids, query, sources)
             
             # 2. Search web content
             web_results = self.web_searcher.search_multiple_sources(query, max_results=2)
@@ -144,3 +149,37 @@ Please provide a helpful answer based on the available context. Use 📘 to indi
         # For now, we keep all data across sessions
         # This could be extended to support session-specific data
         pass
+    
+    def _extract_relevant_images(self, pdf_doc_ids: set, query: str, sources: list):
+        """Extract images from PDFs and add them to sources if relevant."""
+        try:
+            from models import Document
+            from pdf_processor import PDFProcessor
+            
+            pdf_processor = PDFProcessor()
+            
+            for doc_id in pdf_doc_ids:
+                doc = Document.query.get(doc_id)
+                if doc and doc.file_path:
+                    # Extract images from this PDF
+                    images = pdf_processor.extract_images_from_pdf(doc.file_path, query)
+                    
+                    if images:
+                        # Add images to sources
+                        for i, image in enumerate(images):
+                            sources.append({
+                                'type': 'image',
+                                'document': doc.filename,
+                                'page': image.get('page', 'Unknown'),
+                                'image_data': image.get('base64', ''),
+                                'width': image.get('width', 0),
+                                'height': image.get('height', 0),
+                                'size': image.get('size', 0),
+                                'format': image.get('format', 'png')
+                            })
+                        
+                        logger.info(f"Extracted {len(images)} images from {doc.filename}")
+                        
+        except Exception as e:
+            logger.error(f"Error extracting images: {e}")
+            # Don't break the response if image extraction fails

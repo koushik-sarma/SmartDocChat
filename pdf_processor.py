@@ -99,7 +99,7 @@ class PDFProcessor:
             
             # Fallback to PyMuPDF
             try:
-                import fitz  # PyMuPDF
+                import pymupdf as fitz  # PyMuPDF
                 
                 current_chunk = ""
                 processed_pages = 0
@@ -190,54 +190,79 @@ class PDFProcessor:
         Returns list of image info with base64 data for display.
         """
         images = []
+        logger.info(f"Starting image extraction from: {pdf_path}")
         
         try:
             # Try with PyMuPDF first
-            import fitz
+            import pymupdf as fitz
             doc = fitz.open(pdf_path)
+            logger.info(f"Opened PDF with {len(doc)} pages for image extraction")
             
             for page_num in range(len(doc)):
                 page = doc[page_num]
-                image_list = page.get_images()
+                image_list = page.get_images(full=True)
+                logger.info(f"Page {page_num + 1}: Found {len(image_list)} images")
                 
                 for img_index, img in enumerate(image_list):
                     try:
+                        # Get image reference and extract
                         xref = img[0]
-                        pix = fitz.Pixmap(doc, xref)
+                        base_image = doc.extract_image(xref)
+                        image_bytes = base_image["image"]
+                        image_ext = base_image["ext"]
                         
-                        if pix.n - pix.alpha < 4:  # GRAY or RGB
-                            # Convert to PNG bytes
-                            img_data = pix.tobytes("png")
-                            
-                            # Convert to base64 for web display
-                            import base64
-                            img_base64 = base64.b64encode(img_data).decode()
-                            
-                            images.append({
-                                'page': page_num + 1,
-                                'index': img_index,
-                                'base64': img_base64,
-                                'format': 'png',
-                                'size': len(img_data),
-                                'width': pix.width,
-                                'height': pix.height
-                            })
+                        # Skip very small images (likely UI elements)
+                        if len(image_bytes) < 1000:  # Less than 1KB
+                            continue
                         
-                        pix = None  # Free memory
+                        # Convert to base64 for web display
+                        import base64
+                        img_base64 = base64.b64encode(image_bytes).decode()
+                        
+                        images.append({
+                            'page': page_num + 1,
+                            'index': img_index,
+                            'base64': img_base64,
+                            'format': image_ext,
+                            'size': len(image_bytes),
+                            'width': img[2],  # width from image metadata
+                            'height': img[3]  # height from image metadata
+                        })
+                        
+                        logger.info(f"Extracted image {img_index} from page {page_num + 1}: {len(image_bytes)} bytes, format: {image_ext}")
+                        
                     except Exception as img_error:
                         logger.warning(f"Error extracting image {img_index} from page {page_num + 1}: {img_error}")
                         continue
             
             doc.close()
+            logger.info(f"Total images extracted: {len(images)}")
             
         except Exception as e:
             logger.error(f"Error extracting images with PyMuPDF: {e}")
+            
+            # Fallback: Try with pdfplumber
+            try:
+                import pdfplumber
+                logger.info("Trying image extraction with pdfplumber fallback")
+                
+                with pdfplumber.open(pdf_path) as pdf:
+                    for page_num, page in enumerate(pdf.pages):
+                        if hasattr(page, 'images'):
+                            page_images = page.images
+                            logger.info(f"pdfplumber - Page {page_num + 1}: Found {len(page_images)} images")
+                        
+            except Exception as fallback_error:
+                logger.error(f"Fallback image extraction also failed: {fallback_error}")
         
         # If query is provided, filter images that might be relevant
         if query and images:
-            # For now, return first few images if query contains image-related keywords
+            # Return first few images if query contains image-related keywords
             image_keywords = ['image', 'picture', 'chart', 'graph', 'diagram', 'figure', 'photo', 'show me', 'display']
             if any(keyword in query.lower() for keyword in image_keywords):
+                logger.info(f"Query '{query}' contains image keywords, returning {min(3, len(images))} images")
                 return images[:3]  # Return up to 3 most relevant images
         
-        return images[:5] if images else []  # Return up to 5 images by default
+        final_count = min(5, len(images))
+        logger.info(f"Returning {final_count} images from PDF")
+        return images[:final_count]
