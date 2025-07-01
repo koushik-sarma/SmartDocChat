@@ -1339,3 +1339,147 @@ class PDFChatApp {
 document.addEventListener('DOMContentLoaded', () => {
     new PDFChatApp();
 });
+
+// PDF Compression functionality
+function handleCompressionFileSelect(event) {
+    const file = event.target.files[0];
+    const optionsDiv = document.getElementById('compressionOptions');
+    const estimateDiv = document.getElementById('compressionEstimate');
+    const resultDiv = document.getElementById('compressionResult');
+    
+    if (file) {
+        optionsDiv.style.display = 'block';
+        estimateDiv.style.display = 'none';
+        resultDiv.style.display = 'none';
+        
+        // Auto-get estimate for selected file
+        setTimeout(() => getCompressionEstimate(), 500);
+    } else {
+        optionsDiv.style.display = 'none';
+    }
+}
+
+async function getCompressionEstimate() {
+    const fileInput = document.getElementById('compressionFile');
+    const estimateBtn = document.getElementById('getEstimateBtn');
+    const estimateDiv = document.getElementById('compressionEstimate');
+    const estimateSize = document.getElementById('estimateSize');
+    const estimateSavings = document.getElementById('estimateSavings');
+    
+    if (!fileInput.files[0]) {
+        alert('Please select a PDF file first');
+        return;
+    }
+    
+    estimateBtn.disabled = true;
+    estimateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Analyzing...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        
+        const response = await fetch('/compression-estimate', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            estimateSize.textContent = `${result.file_size_mb} MB`;
+            estimateSavings.textContent = `~${result.estimated_savings_mb} MB (${result.estimated_compression_ratio}x)`;
+            estimateDiv.style.display = 'block';
+            
+            // Update compression level recommendation
+            const levelSelect = document.getElementById('compressionLevel');
+            levelSelect.value = result.recommended_level;
+        } else {
+            const error = await response.json();
+            alert(`Error: ${error.error}`);
+        }
+    } catch (error) {
+        console.error('Estimation error:', error);
+        alert('Failed to analyze PDF file');
+    } finally {
+        estimateBtn.disabled = false;
+        estimateBtn.innerHTML = '<i class="fas fa-calculator me-1"></i>Estimate';
+    }
+}
+
+async function compressPDF() {
+    const fileInput = document.getElementById('compressionFile');
+    const levelSelect = document.getElementById('compressionLevel');
+    const compressBtn = document.getElementById('compressBtn');
+    const progressDiv = document.getElementById('compressionProgress');
+    const resultDiv = document.getElementById('compressionResult');
+    
+    if (!fileInput.files[0]) {
+        alert('Please select a PDF file first');
+        return;
+    }
+    
+    compressBtn.disabled = true;
+    progressDiv.style.display = 'block';
+    resultDiv.style.display = 'none';
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('compression_level', levelSelect.value);
+        
+        const response = await fetch('/compress-pdf', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success small">
+                    <h6 class="mb-2"><i class="fas fa-check-circle me-1"></i>Compression Complete!</h6>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>Original:</span>
+                            <span>${result.original_size_mb} MB</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Compressed:</span>
+                            <span>${result.compressed_size_mb} MB</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Savings:</span>
+                            <span>${result.size_reduction_mb} MB (${result.compression_ratio}x)</span>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <a href="${result.download_url}" class="btn btn-success btn-sm" download="${result.filename}">
+                            <i class="fas fa-download me-1"></i>Download Compressed PDF
+                        </a>
+                    </div>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger small">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Compression failed: ${result.error}
+                </div>
+            `;
+        }
+        
+        resultDiv.style.display = 'block';
+        
+    } catch (error) {
+        console.error('Compression error:', error);
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger small">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                Failed to compress PDF. Please try again.
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    } finally {
+        compressBtn.disabled = false;
+        progressDiv.style.display = 'none';
+    }
+}
