@@ -44,9 +44,10 @@ class PDFProcessor:
         # Extract text using pdfplumber with early fallback detection
         try:
             # Quick check for problematic PDFs by file size and content hints
-            if file_size > 30000000:  # Files larger than 30MB are often complex textbooks
-                logger.info("Large PDF detected (>30MB), using PyMuPDF for better performance")
-                raise Exception("Large PDF detected, switching to PyMuPDF")
+            if file_size > 25000000:  # Files larger than 25MB are often complex textbooks
+                logger.info(f"Large PDF detected ({file_size / 1024 / 1024:.1f}MB), using PyMuPDF for better performance")
+                yield from self._extract_with_pymupdf(pdf_path)
+                return
                 
             with pdfplumber.open(pdf_path) as pdf:
                 if len(pdf.pages) == 0:
