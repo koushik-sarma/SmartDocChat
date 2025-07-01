@@ -1,0 +1,23 @@
+This is a medium-sized test document for chemical equation testing.
+
+Chemical Equations in Physics and Chemistry:
+
+Water formation: H2 + O2 → H2O
+Carbon dioxide: C + O2 → CO2
+Sulfuric acid: SO3 + H2O → H2SO4
+Photosynthesis: 6CO2 + 6H2O → C6H12O6 + 6O2
+
+Ionic compounds:
+Sodium chloride: Na+ + Cl- → NaCl
+Calcium hydroxide: Ca2+ + 2OH- → Ca(OH)2
+Ammonium sulfate: 2NH4+ + SO42- → (NH4)2SO4
+
+Chemical reactions with arrows:
+Forward: A + B → C + D
+Reversible: A + B ⇌ C + D
+Equilibrium: A + B ↔ C + D
+
+This document contains various chemical formulas that should be properly formatted for student education.
+Additional content to make the file larger for testing purposes.
+More chemical equations: HCl, NaOH, CaCO3, NH3, CH4, etc.
+Testing multiple chemical formulas and reactions.

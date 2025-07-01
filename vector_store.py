@@ -19,20 +19,30 @@ class VectorStore:
     def add_texts(self, texts: List[str], document_id: int):
         """Add text chunks to the vector store with embeddings."""
         try:
-            # Get embeddings for all texts
-            embeddings = self._get_embeddings(texts)
+            # Process in batches to respect OpenAI token limits
+            batch_size = 50  # Process 50 chunks at a time to stay under token limits
+            total_added = 0
             
-            # Normalize embeddings for cosine similarity
-            embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i:i + batch_size]
+                
+                # Get embeddings for batch
+                embeddings = self._get_embeddings(batch)
+                
+                # Normalize embeddings for cosine similarity
+                embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+                
+                # Add to FAISS index
+                self.index.add(embeddings.astype('float32'))
+                
+                # Store metadata
+                self.texts.extend(batch)
+                self.document_ids.extend([document_id] * len(batch))
+                
+                total_added += len(batch)
+                logger.info(f"Processed batch {i//batch_size + 1}: {len(batch)} chunks")
             
-            # Add to FAISS index
-            self.index.add(embeddings.astype('float32'))
-            
-            # Store metadata
-            self.texts.extend(texts)
-            self.document_ids.extend([document_id] * len(texts))
-            
-            logger.info(f"Added {len(texts)} text chunks for document {document_id}")
+            logger.info(f"Added {total_added} text chunks for document {document_id}")
             
         except Exception as e:
             logger.error(f"Error adding texts to vector store: {e}")
