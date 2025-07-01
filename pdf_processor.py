@@ -151,6 +151,52 @@ class PDFProcessor:
                     pass
                 raise ValueError(f"Failed to process PDF with both methods: pdfplumber ({str(e)}), PyMuPDF ({str(fallback_error)})")
     
+    def _extract_with_pymupdf(self, pdf_path: str):
+        """Extract text using PyMuPDF for large files."""
+        try:
+            import pymupdf  # PyMuPDF
+            
+            current_chunk = ""
+            processed_pages = 0
+            
+            doc = pymupdf.open(pdf_path)
+            for page_num in range(len(doc)):
+                try:
+                    page = doc.load_page(page_num)
+                    page_text = page.get_text()
+                    processed_pages += 1
+                    
+                    if page_text and page_text.strip():
+                        page_text = self._clean_text(page_text)
+                        current_chunk += f" {page_text}"
+                        
+                        while len(current_chunk.split()) > self.chunk_size:
+                            chunk_words = current_chunk.split()
+                            chunk = " ".join(chunk_words[:self.chunk_size])
+                            if chunk.strip():
+                                yield chunk
+                            current_chunk = " ".join(chunk_words[self.chunk_size:])
+                
+                except Exception as e:
+                    logger.warning(f"Error processing page {page_num + 1} with PyMuPDF: {e}")
+                    continue
+            
+            doc.close()
+            
+            # Yield remaining chunk
+            if current_chunk.strip():
+                yield current_chunk
+            
+            if processed_pages == 0:
+                raise ValueError("Could not extract text from any pages with PyMuPDF")
+                
+            logger.info(f"PyMuPDF processed {processed_pages} pages successfully")
+            
+        except ImportError:
+            raise ValueError("PyMuPDF not available for large file processing")
+        except Exception as e:
+            raise ValueError(f"PyMuPDF processing failed: {str(e)}")
+    
     def _clean_text(self, text: str) -> str:
         """Clean extracted text while preserving chemical equations and special characters."""
         if not text:

@@ -133,7 +133,7 @@ Please provide a helpful answer based on the available context. Use 📘 to indi
                 temperature=0.7
             )
             
-            answer = response.choices[0].message.content
+            answer = response.choices[0].message.content or "I couldn't generate a response."
             
             return answer, sources
             
@@ -189,7 +189,7 @@ Please provide a helpful answer based on the available context. Use 📘 to indi
             self.vector_store.clear()
             self.vector_store.save("vector_store")
     
-    def _extract_relevant_images(self, pdf_doc_ids: set, query: str, sources: list, relevant_chunks: List[Tuple[str, float, int]] = None):
+    def _extract_relevant_images(self, pdf_doc_ids: set, query: str, sources: list, relevant_chunks=None):
         """Extract images from PDFs based on content relevance and add them to sources."""
         try:
             from models import Document
