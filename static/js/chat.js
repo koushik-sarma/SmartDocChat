@@ -306,7 +306,18 @@ class PDFChatApp {
                 body: JSON.stringify({ message: message })
             });
             
-            const result = await response.json();
+            // Get the raw response text first to debug parsing issues
+            const responseText = await response.text();
+            console.log('Chat response text:', responseText.substring(0, 200) + '...');
+            
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON parsing failed:', parseError);
+                console.error('Response text:', responseText);
+                throw new Error(`Server returned invalid JSON. Response starts with: ${responseText.substring(0, 100)}`);
+            }
             
             if (response.ok) {
                 this.addMessageToChat('assistant', result.response, result.sources);
@@ -314,6 +325,7 @@ class PDFChatApp {
                 this.addMessageToChat('assistant', `❌ Error: ${result.error}`, null);
             }
         } catch (error) {
+            console.error('Chat error:', error);
             this.addMessageToChat('assistant', `❌ Failed to get response: ${error.message}`, null);
         } finally {
             this.showTyping(false);
