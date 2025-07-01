@@ -1354,7 +1354,7 @@ class PDFChatApp {
             const documents = await response.json();
             
             if (documents.length < 2) {
-                this.showError('You need at least 2 documents to compare. Please upload more documents.');
+                this.showError(`You need at least 2 documents to compare. You currently have ${documents.length} document(s). Please upload more documents.`);
                 return;
             }
             
@@ -1397,7 +1397,7 @@ class PDFChatApp {
             
         } catch (error) {
             console.error('Error comparing documents:', error);
-            this.showError('Failed to compare documents. Please try again.');
+            this.showError(`Failed to compare documents: ${error.message}. Please try again.`);
         } finally {
             // Reset button state
             this.compareDocsBtn.disabled = false;

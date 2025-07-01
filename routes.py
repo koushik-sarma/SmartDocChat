@@ -589,7 +589,8 @@ def compare_documents():
         
         return jsonify({
             'message': 'Document comparison completed',
-            'comparison': comparison_result
+            'comparison': comparison_result,
+            'documents_compared': [{'id': doc.id, 'filename': doc.filename} for doc in documents]
         })
         
     except Exception as e:
