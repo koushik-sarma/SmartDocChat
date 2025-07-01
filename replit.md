@@ -123,6 +123,10 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - July 1, 2025: Added multi-format document support (PDF, DOCX, TXT, MD files)
 - July 1, 2025: Implemented document comparison and cross-referencing features
 - July 1, 2025: Added automatic response regeneration when AI personality changes
+- July 1, 2025: Fixed PyMuPDF import issue preventing PDF image extraction
+- July 1, 2025: Fixed document controls disappearing on page refresh - delete/toggle buttons now persist
+- July 1, 2025: Enhanced PDF image extraction with comprehensive debugging and automatic trigger
+- July 1, 2025: Updated frontend to display extracted PDF images in chat with click-to-expand functionality
 
 ## Phase 1 Complete - Checkpoint
 Successfully implemented comprehensive PDF chat application with:

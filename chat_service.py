@@ -66,9 +66,14 @@ class ChatService:
                         'document_count': len(pdf_doc_ids)
                     })
                     
-                    # Extract images if query suggests image-related content
+                    # Always try to extract images for testing (can be made conditional later)
+                    # Extract images if query suggests image-related content or for testing
                     image_keywords = ['image', 'picture', 'chart', 'graph', 'diagram', 'figure', 'photo', 'show me', 'display']
-                    if any(keyword in query.lower() for keyword in image_keywords):
+                    should_extract_images = any(keyword in query.lower() for keyword in image_keywords)
+                    
+                    # For debugging: temporarily extract images on all queries
+                    if should_extract_images or True:  # Remove "or True" after testing
+                        logger.info(f"Attempting to extract images for query: {query}")
                         self._extract_relevant_images(pdf_doc_ids, query, sources)
             
             # 2. Search web content

@@ -5,6 +5,7 @@ class PDFChatApp {
         this.loadStats();
         this.scrollToBottom();
         this.currentAudio = null; // Track current playing audio
+        this.attachExistingDocumentListeners(); // Fix for page refresh
     }
     
     initializeElements() {
@@ -102,6 +103,63 @@ class PDFChatApp {
         
         // Enable input when documents are present
         this.updateInputState();
+    }
+    
+    attachExistingDocumentListeners() {
+        // Attach event listeners to documents that exist on page load
+        const existingDocs = this.documentsList.querySelectorAll('.document-item');
+        existingDocs.forEach(docDiv => {
+            const docId = docDiv.dataset.docId;
+            
+            // Check if this document already has controls
+            let toggleCheckbox = docDiv.querySelector('.doc-toggle');
+            let deleteButton = docDiv.querySelector('.delete-doc-btn');
+            
+            // If no controls exist, add them
+            if (!toggleCheckbox || !deleteButton) {
+                // Replace the existing content with proper controls
+                const filename = docDiv.querySelector('.fw-bold').textContent;
+                const chunkText = docDiv.querySelector('.text-muted').textContent;
+                
+                docDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="form-check me-2">
+                            <input class="form-check-input doc-toggle" type="checkbox" 
+                                   checked 
+                                   data-doc-id="${docId}"
+                                   title="Include in context">
+                        </div>
+                        <i class="fas fa-file-pdf text-danger me-2"></i>
+                        <div class="flex-grow-1">
+                            <div class="small fw-bold text-truncate">${filename}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">
+                                ${chunkText}
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger ms-2 delete-doc-btn" 
+                                data-doc-id="${docId}" 
+                                title="Delete document">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // Get the new elements after replacing content
+                toggleCheckbox = docDiv.querySelector('.doc-toggle');
+                deleteButton = docDiv.querySelector('.delete-doc-btn');
+            }
+            
+            // Add event listeners
+            if (toggleCheckbox && !toggleCheckbox.hasAttribute('data-listener-attached')) {
+                toggleCheckbox.addEventListener('change', (e) => this.toggleDocumentActive(e));
+                toggleCheckbox.setAttribute('data-listener-attached', 'true');
+            }
+            
+            if (deleteButton && !deleteButton.hasAttribute('data-listener-attached')) {
+                deleteButton.addEventListener('click', (e) => this.deleteDocument(e));
+                deleteButton.setAttribute('data-listener-attached', 'true');
+            }
+        });
     }
     
     async handleFileUpload(event) {
