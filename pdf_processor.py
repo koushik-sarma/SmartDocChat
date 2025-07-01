@@ -48,7 +48,7 @@ class PDFProcessor:
                 logger.info(f"Large PDF detected ({file_size / 1024 / 1024:.1f}MB), using PyMuPDF for better performance")
                 yield from self._extract_with_pymupdf(pdf_path)
                 return
-                
+            
             with pdfplumber.open(pdf_path) as pdf:
                 if len(pdf.pages) == 0:
                     raise ValueError("PDF file contains no pages")
