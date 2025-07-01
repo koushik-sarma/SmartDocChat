@@ -10,6 +10,7 @@ class Document(db.Model):
     upload_time = db.Column(db.DateTime, default=datetime.utcnow)
     chunk_count = db.Column(db.Integer, default=0)
     file_size = db.Column(db.Integer)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     
     def to_dict(self):
         return {
@@ -17,7 +18,8 @@ class Document(db.Model):
             'filename': self.filename,
             'upload_time': self.upload_time.isoformat(),
             'chunk_count': self.chunk_count,
-            'file_size': self.file_size
+            'file_size': self.file_size,
+            'is_active': getattr(self, 'is_active', True)
         }
 
 class ChatMessage(db.Model):

@@ -109,6 +109,9 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - June 29, 2025: Added TTS functionality using OpenAI TTS with voice selection and expressive speech processing
 - June 30, 2025: Enhanced mobile responsiveness with touch-friendly controls, sidebar navigation, and optimized layouts for all screen sizes
 - June 30, 2025: Added advanced TTS features with play/pause controls, audio download capability, and multi-language support including Tenglish (Telugu-English mix)
+- July 1, 2025: Implemented comprehensive document management with delete functionality and context selection
+- July 1, 2025: Enhanced PDF processing with robust multi-fallback error handling (pdfplumber + PyMuPDF)
+- July 1, 2025: Fixed document display issues and added individual document control capabilities
 
 ## User Preferences
 

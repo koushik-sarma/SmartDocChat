@@ -244,6 +244,77 @@ def clear_session():
         logger.error(f"Error clearing session: {e}")
         return jsonify({'error': f'Failed to clear session: {str(e)}'}), 500
 
+@app.route('/delete-document/<int:doc_id>', methods=['DELETE'])
+def delete_document(doc_id):
+    """Delete a specific document."""
+    try:
+        session_id = session.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No active session'}), 400
+        
+        # Find the document
+        doc = Document.query.filter_by(id=doc_id, session_id=session_id).first()
+        if not doc:
+            return jsonify({'error': 'Document not found'}), 404
+        
+        # Delete the physical file
+        try:
+            if os.path.exists(doc.file_path):
+                os.remove(doc.file_path)
+        except Exception as e:
+            logger.warning(f"Could not delete file {doc.file_path}: {e}")
+        
+        # Remove from database
+        db.session.delete(doc)
+        db.session.commit()
+        
+        # Clear and rebuild vector store for remaining documents
+        from vector_store import VectorStore
+        from pdf_processor import PDFProcessor
+        vector_store = VectorStore()
+        vector_store.clear()
+        
+        # Reload remaining documents
+        remaining_docs = Document.query.filter_by(session_id=session_id).all()
+        for remaining_doc in remaining_docs:
+            if os.path.exists(remaining_doc.file_path):
+                pdf_processor = PDFProcessor()
+                chunks = list(pdf_processor.extract_text_chunks(remaining_doc.file_path))
+                chat_service.process_pdf_chunks(chunks, remaining_doc.id)
+        
+        return jsonify({
+            'message': f'Document {doc.filename} deleted successfully',
+            'remaining_documents': len(remaining_docs)
+        })
+    except Exception as e:
+        logger.error(f"Error deleting document: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/toggle-document/<int:doc_id>', methods=['POST'])
+def toggle_document(doc_id):
+    """Toggle document inclusion in context."""
+    try:
+        session_id = session.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No active session'}), 400
+        
+        # Find the document
+        doc = Document.query.filter_by(id=doc_id, session_id=session_id).first()
+        if not doc:
+            return jsonify({'error': 'Document not found'}), 404
+        
+        # Toggle the active status
+        doc.is_active = not doc.is_active
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'Document {doc.filename} {"enabled" if doc.is_active else "disabled"}',
+            'is_active': doc.is_active
+        })
+    except Exception as e:
+        logger.error(f"Error toggling document: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/stats')
 def get_stats():
     """Get application statistics."""

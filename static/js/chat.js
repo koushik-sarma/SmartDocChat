@@ -139,13 +139,25 @@ class PDFChatApp {
                 
                 if (result.document) {
                     try {
-                        this.addDocumentToList(result.document);
-                        this.updateDocumentCount();
-                        this.updateInputState();
-                        this.loadStats();
+                        // Check if documentsList exists
+                        if (!this.documentsList) {
+                            console.error('Documents list element not found');
+                            this.documentsList = document.getElementById('documentsList');
+                        }
+                        
+                        if (this.documentsList) {
+                            this.addDocumentToList(result.document);
+                            this.updateDocumentCount();
+                            this.updateInputState();
+                            this.loadStats();
+                        } else {
+                            console.error('Cannot find documents list container');
+                        }
                     } catch (uiError) {
                         console.error('UI update error:', uiError);
-                        // Don't fail the upload if UI update fails
+                        // Don't fail the upload if UI update fails - just log the error
+                        console.log('Document data:', result.document);
+                        console.log('DocumentsList element:', this.documentsList);
                     }
                 }
             } else {
@@ -288,22 +300,44 @@ class PDFChatApp {
     
     addDocumentToList(docData) {
         const docDiv = document.createElement('div');
-        docDiv.className = 'document-item mb-2 p-2 rounded';
+        docDiv.className = 'document-item mb-2 p-2 rounded border';
         docDiv.dataset.docId = docData.id;
+        
+        const isActive = docData.is_active !== false;
+        const activeClass = isActive ? 'border-success' : 'border-secondary opacity-50';
+        docDiv.classList.add(activeClass);
         
         docDiv.innerHTML = `
             <div class="d-flex align-items-center">
+                <div class="form-check me-2">
+                    <input class="form-check-input doc-toggle" type="checkbox" 
+                           ${isActive ? 'checked' : ''} 
+                           data-doc-id="${docData.id}"
+                           title="Include in context">
+                </div>
                 <i class="fas fa-file-pdf text-danger me-2"></i>
                 <div class="flex-grow-1">
                     <div class="small fw-bold text-truncate">${docData.filename}</div>
                     <div class="text-muted" style="font-size: 0.75rem;">
-                        ${docData.chunk_count} chunks
+                        ${docData.chunk_count} chunks • ${this.formatFileSize(docData.file_size)}
                     </div>
                 </div>
+                <button class="btn btn-sm btn-outline-danger ms-2 delete-doc-btn" 
+                        data-doc-id="${docData.id}" 
+                        title="Delete document">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
         `;
         
         this.documentsList.appendChild(docDiv);
+        
+        // Add event listeners for the new controls
+        const toggleCheckbox = docDiv.querySelector('.doc-toggle');
+        const deleteButton = docDiv.querySelector('.delete-doc-btn');
+        
+        toggleCheckbox.addEventListener('change', (e) => this.toggleDocumentActive(e));
+        deleteButton.addEventListener('click', (e) => this.deleteDocument(e));
     }
     
     updateDocumentCount() {
@@ -614,6 +648,106 @@ class PDFChatApp {
         setTimeout(() => {
             this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
         }, 100);
+    }
+    
+    formatFileSize(bytes) {
+        if (!bytes) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    async toggleDocumentActive(e) {
+        const docId = e.target.dataset.docId;
+        const isChecked = e.target.checked;
+        
+        try {
+            const response = await fetch(`/toggle-document/${docId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                const docDiv = e.target.closest('.document-item');
+                
+                // Update visual styling
+                if (isChecked) {
+                    docDiv.classList.remove('border-secondary', 'opacity-50');
+                    docDiv.classList.add('border-success');
+                } else {
+                    docDiv.classList.remove('border-success');
+                    docDiv.classList.add('border-secondary', 'opacity-50');
+                }
+                
+                this.showUploadStatus(`📄 ${result.message}`, 'info');
+            } else {
+                // Revert checkbox if request failed
+                e.target.checked = !isChecked;
+                const errorData = await response.json();
+                this.showUploadStatus(`❌ ${errorData.error}`, 'error');
+            }
+        } catch (error) {
+            // Revert checkbox if request failed
+            e.target.checked = !isChecked;
+            console.error('Toggle error:', error);
+            this.showUploadStatus('❌ Failed to update document status', 'error');
+        }
+    }
+    
+    async deleteDocument(e) {
+        const docId = e.target.closest('.delete-doc-btn').dataset.docId;
+        const docDiv = e.target.closest('.document-item');
+        const filename = docDiv.querySelector('.fw-bold').textContent;
+        
+        if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+            return;
+        }
+        
+        try {
+            const button = e.target.closest('.delete-doc-btn');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            const response = await fetch(`/delete-document/${docId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                
+                // Remove from DOM
+                docDiv.remove();
+                
+                // Update counts
+                this.updateDocumentCount();
+                this.updateInputState();
+                this.loadStats();
+                
+                this.showUploadStatus(`🗑️ ${result.message}`, 'success');
+                
+                // If no documents left, show appropriate message
+                if (result.remaining_documents === 0) {
+                    this.showUploadStatus('📋 All documents removed. Upload a PDF to get started.', 'info');
+                }
+            } else {
+                const errorData = await response.json();
+                this.showUploadStatus(`❌ ${errorData.error}`, 'error');
+                // Restore button
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-trash"></i>';
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            this.showUploadStatus('❌ Failed to delete document', 'error');
+            // Restore button
+            const button = e.target.closest('.delete-doc-btn');
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-trash"></i>';
+        }
     }
 }
 
