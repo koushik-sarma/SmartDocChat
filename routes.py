@@ -485,16 +485,23 @@ def user_profile():
 def get_stats():
     """Get application statistics."""
     try:
-        vector_stats = chat_service.get_vector_store_stats()
-        
+        # Get session-specific stats instead of global vector store stats
+        session_chunks = 0
         session_docs = 0
+        total_documents = Document.query.count()
+        total_chunks = db.session.query(db.func.sum(Document.chunk_count)).scalar() or 0
+        
         if 'session_id' in session:
-            session_docs = Document.query.filter_by(session_id=session['session_id']).count()
+            session_id = session['session_id']
+            session_docs = Document.query.filter_by(session_id=session_id).count()
+            session_chunks = db.session.query(db.func.sum(Document.chunk_count)).filter_by(session_id=session_id).scalar() or 0
         
         return jsonify({
-            'total_chunks': vector_stats['total_chunks'],
-            'total_documents': vector_stats['document_count'],
-            'session_documents': session_docs
+            'total_chunks': session_chunks,  # Show session-specific chunks, not global
+            'total_documents': session_docs,  # Show session-specific documents
+            'session_documents': session_docs,
+            'global_total_chunks': total_chunks,  # Optional: global stats for debugging
+            'global_total_documents': total_documents
         })
     except Exception as e:
         logger.error(f"Error getting stats: {e}")
