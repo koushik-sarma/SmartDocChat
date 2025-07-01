@@ -310,11 +310,13 @@ class PDFChatApp {
         
         messageDiv.innerHTML = `
             <div class="message-content">
-                <div class="message-text">${this.formatMessageContent(content)}</div>
-                <div class="message-metadata">
-                    <span>${timestamp}</span>
-                    ${type === 'user' ? '<i class="fas fa-check-double"></i>' : ''}
+                <div class="message-header">
+                    <strong>
+                        <i class="fas ${icon} me-1"></i>${name}
+                    </strong>
+                    <small class="text-muted">${timestamp}</small>
                 </div>
+                <div class="message-text">${this.formatMessageContent(content)}</div>
                 ${ttsControlsHtml}
                 ${sourcesHtml}
             </div>
@@ -422,30 +424,12 @@ class PDFChatApp {
     }
     
     showTyping(show) {
-        if (show) {
-            // Create WhatsApp-style typing indicator
-            if (!document.querySelector('.typing-indicator')) {
-                const typingDiv = document.createElement('div');
-                typingDiv.className = 'message assistant-message typing-message';
-                typingDiv.innerHTML = `
-                    <div class="typing-indicator">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                `;
-                this.chatMessages.appendChild(typingDiv);
-                this.scrollToBottom();
-            }
-        } else {
-            // Remove typing indicator
-            const typingMessage = document.querySelector('.typing-message');
-            if (typingMessage) {
-                typingMessage.remove();
-            }
-        }
-        
+        this.typingIndicator.style.display = show ? 'block' : 'none';
         this.sendButton.disabled = show;
+        
+        if (show) {
+            this.scrollToBottom();
+        }
     }
     
     async clearSession() {
