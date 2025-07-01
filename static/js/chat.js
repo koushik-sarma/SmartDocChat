@@ -82,6 +82,24 @@ class PDFChatApp {
         // Phase 2 Settings Event Listeners
         this.setupPhase2Features();
         
+        // Help panel button
+        const helpPanelBtn = document.getElementById('helpPanelBtn');
+        if (helpPanelBtn) {
+            helpPanelBtn.addEventListener('click', () => {
+                const helpModal = new bootstrap.Modal(document.getElementById('helpModal'));
+                helpModal.show();
+            });
+        }
+        
+        // Voice input in chat area
+        const voiceInputBtn = document.getElementById('voiceInputBtn');
+        if (voiceInputBtn) {
+            voiceInputBtn.addEventListener('click', () => this.startVoiceRecognition());
+        }
+        
+        // Initialize voice input by default
+        this.initializeVoiceInput();
+        
         // Enable input when documents are present
         this.updateInputState();
     }
@@ -798,18 +816,7 @@ class PDFChatApp {
             });
         }
         
-        // Voice Input Toggle
-        const voiceInput = document.getElementById('voiceInput');
-        if (voiceInput) {
-            voiceInput.addEventListener('change', (e) => {
-                this.updateProfile({ voice_enabled: e.target.checked });
-                if (e.target.checked) {
-                    this.initializeVoiceInput();
-                } else {
-                    this.disableVoiceInput();
-                }
-            });
-        }
+        // Voice input is now always available in chat input
         
         // Load current profile settings
         this.loadProfile();
@@ -882,23 +889,28 @@ class PDFChatApp {
     }
     
     setTheme(theme) {
-        const body = document.body;
         const html = document.documentElement;
         
         if (theme === 'light') {
             html.setAttribute('data-bs-theme', 'light');
-            body.classList.remove('dark-theme');
-            body.classList.add('light-theme');
+            // Update CSS link to light theme
+            const themeLink = document.querySelector('link[href*="bootstrap-agent-dark-theme"]');
+            if (themeLink) {
+                themeLink.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+            }
         } else {
             html.setAttribute('data-bs-theme', 'dark');
-            body.classList.remove('light-theme');
-            body.classList.add('dark-theme');
+            // Update CSS link to dark theme
+            const themeLink = document.querySelector('link[href*="bootstrap"]');
+            if (themeLink) {
+                themeLink.href = 'https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css';
+            }
         }
     }
     
     initializeVoiceInput() {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            this.showUploadStatus('🎤 Voice input not supported in this browser', 'info');
+            console.log('Voice input not supported in this browser');
             return;
         }
         
@@ -913,53 +925,68 @@ class PDFChatApp {
                 const transcript = event.results[0][0].transcript;
                 this.messageInput.value = transcript;
                 this.messageInput.focus();
+                // Reset button state
+                const voiceBtn = document.getElementById('voiceInputBtn');
+                if (voiceBtn) {
+                    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                    voiceBtn.disabled = false;
+                }
             };
             
             this.recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
-                this.showUploadStatus('🎤 Voice input error. Please try again.', 'error');
+                // Reset button state
+                const voiceBtn = document.getElementById('voiceInputBtn');
+                if (voiceBtn) {
+                    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                    voiceBtn.disabled = false;
+                }
             };
             
-            // Add voice button to input area
-            this.addVoiceButton();
+            this.recognition.onend = () => {
+                // Reset button state when recognition ends
+                const voiceBtn = document.getElementById('voiceInputBtn');
+                if (voiceBtn) {
+                    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                    voiceBtn.disabled = false;
+                }
+            };
+            
+            // Show voice button
+            const voiceBtn = document.getElementById('voiceInputBtn');
+            if (voiceBtn) {
+                voiceBtn.style.display = 'block';
+            }
             
         } catch (error) {
             console.error('Voice recognition setup error:', error);
-            this.showUploadStatus('🎤 Voice input setup failed', 'error');
-        }
-    }
-    
-    addVoiceButton() {
-        // Add voice button next to send button
-        const chatForm = document.getElementById('chatForm');
-        if (chatForm && !document.getElementById('voiceButton')) {
-            const voiceButton = document.createElement('button');
-            voiceButton.type = 'button';
-            voiceButton.id = 'voiceButton';
-            voiceButton.className = 'btn btn-outline-secondary ms-2';
-            voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
-            voiceButton.title = 'Voice Input';
-            
-            voiceButton.addEventListener('click', () => this.startVoiceRecognition());
-            
-            const sendButton = chatForm.querySelector('button[type="submit"]');
-            sendButton.parentNode.insertBefore(voiceButton, sendButton.nextSibling);
         }
     }
     
     startVoiceRecognition() {
         if (this.recognition) {
-            const voiceButton = document.getElementById('voiceButton');
-            voiceButton.innerHTML = '<i class="fas fa-stop text-danger"></i>';
-            voiceButton.disabled = true;
+            const voiceButton = document.getElementById('voiceInputBtn');
+            if (voiceButton) {
+                voiceButton.innerHTML = '<i class="fas fa-stop text-danger"></i>';
+                voiceButton.disabled = true;
+            }
             
-            this.recognition.start();
-            
-            setTimeout(() => {
-                this.recognition.stop();
-                voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
-                voiceButton.disabled = false;
-            }, 5000); // Stop after 5 seconds
+            try {
+                this.recognition.start();
+                
+                // Auto-stop after 5 seconds
+                setTimeout(() => {
+                    if (this.recognition) {
+                        this.recognition.stop();
+                    }
+                }, 5000);
+            } catch (error) {
+                console.error('Voice recognition start error:', error);
+                if (voiceButton) {
+                    voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
+                    voiceButton.disabled = false;
+                }
+            }
         }
     }
     

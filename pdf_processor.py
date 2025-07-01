@@ -1,6 +1,6 @@
 import pdfplumber
 import logging
-from typing import List, Generator
+from typing import List, Generator, Dict
 import os
 import re
 
@@ -183,3 +183,61 @@ class PDFProcessor:
         except Exception as e:
             logger.error(f"Error getting PDF info: {str(e)}")
             raise ValueError(f"Cannot read PDF file: {str(e)}")
+    
+    def extract_images_from_pdf(self, pdf_path: str, query: str = None) -> List[Dict]:
+        """
+        Extract images from PDF that are relevant to a user query.
+        Returns list of image info with base64 data for display.
+        """
+        images = []
+        
+        try:
+            # Try with PyMuPDF first
+            import fitz
+            doc = fitz.open(pdf_path)
+            
+            for page_num in range(len(doc)):
+                page = doc[page_num]
+                image_list = page.get_images()
+                
+                for img_index, img in enumerate(image_list):
+                    try:
+                        xref = img[0]
+                        pix = fitz.Pixmap(doc, xref)
+                        
+                        if pix.n - pix.alpha < 4:  # GRAY or RGB
+                            # Convert to PNG bytes
+                            img_data = pix.tobytes("png")
+                            
+                            # Convert to base64 for web display
+                            import base64
+                            img_base64 = base64.b64encode(img_data).decode()
+                            
+                            images.append({
+                                'page': page_num + 1,
+                                'index': img_index,
+                                'base64': img_base64,
+                                'format': 'png',
+                                'size': len(img_data),
+                                'width': pix.width,
+                                'height': pix.height
+                            })
+                        
+                        pix = None  # Free memory
+                    except Exception as img_error:
+                        logger.warning(f"Error extracting image {img_index} from page {page_num + 1}: {img_error}")
+                        continue
+            
+            doc.close()
+            
+        except Exception as e:
+            logger.error(f"Error extracting images with PyMuPDF: {e}")
+        
+        # If query is provided, filter images that might be relevant
+        if query and images:
+            # For now, return first few images if query contains image-related keywords
+            image_keywords = ['image', 'picture', 'chart', 'graph', 'diagram', 'figure', 'photo', 'show me', 'display']
+            if any(keyword in query.lower() for keyword in image_keywords):
+                return images[:3]  # Return up to 3 most relevant images
+        
+        return images[:5] if images else []  # Return up to 5 images by default

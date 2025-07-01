@@ -112,6 +112,12 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - July 1, 2025: Implemented comprehensive document management with delete functionality and context selection
 - July 1, 2025: Enhanced PDF processing with robust multi-fallback error handling (pdfplumber + PyMuPDF)
 - July 1, 2025: Fixed document display issues and added individual document control capabilities
+- July 1, 2025: Fixed Phase 2 bugs - Dark/Light theme toggle working properly with CSS switching
+- July 1, 2025: Moved voice input from sidebar to chat input area (Google/WhatsApp style)
+- July 1, 2025: Added comprehensive help panel with instructions and tool capabilities
+- July 1, 2025: Fixed PDF source deduplication - single entry per document type in Sources
+- July 1, 2025: Implemented PDF image extraction with query-based relevance filtering
+- July 1, 2025: Enhanced voice input with browser speech recognition (Chrome/Edge optimized)
 
 ## Phase 1 Complete - Checkpoint
 Successfully implemented comprehensive PDF chat application with:

@@ -44,18 +44,21 @@ class ChatService:
             
             if pdf_results:
                 pdf_context = []
+                pdf_doc_ids = set()  # Track unique document IDs
                 for text, score, doc_id in pdf_results:
                     if score > 0.1:  # Lower relevance threshold for better results
                         pdf_context.append(text)
-                        sources.append({
-                            'type': 'pdf',
-                            'content': text[:200] + '...' if len(text) > 200 else text,
-                            'score': score,
-                            'document_id': doc_id
-                        })
+                        pdf_doc_ids.add(doc_id)
                 
+                # Add only one source entry for PDF documents (deduplicated)
                 if pdf_context:
                     context_parts.append(f"📘 **From PDF Documents:**\n{' '.join(pdf_context[:3])}")
+                    # Add a single PDF source entry
+                    sources.append({
+                        'type': 'pdf',
+                        'content': f"Retrieved from {len(pdf_doc_ids)} PDF document(s)",
+                        'document_count': len(pdf_doc_ids)
+                    })
             
             # 2. Search web content
             web_results = self.web_searcher.search_multiple_sources(query, max_results=2)
