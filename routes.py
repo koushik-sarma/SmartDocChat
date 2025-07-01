@@ -12,14 +12,14 @@ from pdf_processor import PDFProcessor
 from document_processor import DocumentProcessor
 from chat_service import ChatService
 from tts_service import SimpleTTSWrapper
-from pdf_compressor import PDFCompressor
+from basic_pdf_compressor import BasicPDFCompressor
 
 logger = logging.getLogger(__name__)
 
 # Initialize services
 pdf_processor = PDFProcessor()
 chat_service = ChatService()
-pdf_compressor = PDFCompressor()
+pdf_compressor = BasicPDFCompressor()
 tts_service = SimpleTTSWrapper()
 
 def allowed_file(filename):
