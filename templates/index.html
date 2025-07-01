@@ -208,33 +208,25 @@
                         </div>
                     </div>
                     
-                    <!-- Chat Input -->
-                    <div class="chat-input p-3 border-top">
-                        <form id="chatForm" class="d-flex align-items-center">
-                            <div class="input-group me-2">
+                    <!-- WhatsApp-style Chat Input -->
+                    <div class="chat-input">
+                        <form id="chatForm">
+                            <div class="input-group">
+                                <button type="button" class="btn" title="Help & Instructions" id="helpPanelBtn">
+                                    <i class="fas fa-question-circle"></i>
+                                </button>
                                 <input type="text" id="messageInput" class="form-control" 
-                                       placeholder="Ask a question about your documents..." 
+                                       placeholder="Type a message" 
                                        disabled>
-                                <button type="button" id="voiceInputBtn" class="btn btn-outline-secondary" 
-                                        title="Voice Input (Click and speak)" style="display: none;">
+                                <button type="button" id="voiceInputBtn" class="btn" 
+                                        title="Voice Input" style="display: none;">
                                     <i class="fas fa-microphone"></i>
                                 </button>
+                                <button type="submit" id="sendButton" class="btn btn-success" disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
                             </div>
-                            <button type="submit" id="sendButton" class="btn btn-primary px-4" disabled>
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                            <button type="button" id="helpPanelBtn" class="btn btn-outline-info ms-2" 
-                                    title="Help & Instructions">
-                                <i class="fas fa-question-circle"></i>
-                            </button>
                         </form>
-                        
-                        <div id="typingIndicator" class="mt-2" style="display: none;">
-                            <small class="text-muted">
-                                <i class="fas fa-spinner fa-spin me-1"></i>
-                                AI is thinking...
-                            </small>
-                        </div>
                     </div>
                 </div>
             </div>
