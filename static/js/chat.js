@@ -286,18 +286,18 @@ class PDFChatApp {
             .replace(/\n/g, '<br>');
     }
     
-    addDocumentToList(document) {
+    addDocumentToList(docData) {
         const docDiv = document.createElement('div');
         docDiv.className = 'document-item mb-2 p-2 rounded';
-        docDiv.dataset.docId = document.id;
+        docDiv.dataset.docId = docData.id;
         
         docDiv.innerHTML = `
             <div class="d-flex align-items-center">
                 <i class="fas fa-file-pdf text-danger me-2"></i>
                 <div class="flex-grow-1">
-                    <div class="small fw-bold text-truncate">${document.filename}</div>
+                    <div class="small fw-bold text-truncate">${docData.filename}</div>
                     <div class="text-muted" style="font-size: 0.75rem;">
-                        ${document.chunk_count} chunks
+                        ${docData.chunk_count} chunks
                     </div>
                 </div>
             </div>
