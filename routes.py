@@ -198,7 +198,9 @@ def chat():
         
         # Generate response
         try:
-            response_text, sources = chat_service.generate_response(user_message, session_id, ai_role)
+            # Ensure ai_role is a string, not None
+            ai_role_str = ai_role if ai_role is not None else "You are a helpful AI assistant."
+            response_text, sources = chat_service.generate_response(user_message, session_id, ai_role_str)
             
             # Save assistant response
             assistant_msg = ChatMessage(

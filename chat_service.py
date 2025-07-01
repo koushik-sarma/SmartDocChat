@@ -30,7 +30,7 @@ class ChatService:
             logger.error(f"Error processing PDF chunks: {e}")
             raise
     
-    def generate_response(self, query: str, session_id: str, ai_role: str = None) -> Tuple[str, List[Dict]]:
+    def generate_response(self, query: str, session_id: str, ai_role: str = "You are a helpful AI assistant.") -> Tuple[str, List[Dict]]:
         """
         Generate a response combining PDF content and web search results.
         Returns the response text and a list of sources.
