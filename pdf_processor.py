@@ -29,11 +29,16 @@ class PDFProcessor:
             logger.error("PDF file is empty")
             raise ValueError("PDF file is empty")
         
-        # Use pdfplumber for reliable PDF text extraction
+        # Use pdfplumber for reliable PDF text extraction with fallback detection
         logger.info("Using pdfplumber for PDF text extraction")
         
-        # Extract text using pdfplumber
+        # Extract text using pdfplumber with early fallback detection
         try:
+            # Quick check for problematic PDFs by file size and content hints
+            if file_size > 30000000:  # Files larger than 30MB are often complex textbooks
+                logger.info("Large PDF detected (>30MB), using PyMuPDF for better performance")
+                raise Exception("Large PDF detected, switching to PyMuPDF")
+                
             with pdfplumber.open(pdf_path) as pdf:
                 if len(pdf.pages) == 0:
                     raise ValueError("PDF file contains no pages")
@@ -43,29 +48,9 @@ class PDFProcessor:
                 
                 for page_num, page in enumerate(pdf.pages):
                     try:
-                        # Try multiple extraction methods for problematic PDFs
-                        page_text = None
-                        
-                        # Method 1: Standard text extraction
-                        try:
-                            page_text = page.extract_text()
-                        except Exception as e1:
-                            logger.warning(f"Standard extraction failed for page {page_num + 1}: {e1}")
-                            
-                            # Method 2: Extract with simpler parameters
-                            try:
-                                page_text = page.extract_text(layout=False)
-                            except Exception as e2:
-                                logger.warning(f"Simple extraction failed for page {page_num + 1}: {e2}")
-                                
-                                # Method 3: Extract characters directly
-                                try:
-                                    chars = page.chars
-                                    if chars:
-                                        page_text = ''.join([char.get('text', '') for char in chars])
-                                except Exception as e3:
-                                    logger.warning(f"Character extraction failed for page {page_num + 1}: {e3}")
-                                    page_text = f"[Page {page_num + 1}: Content extraction failed]"
+                        page_text = page.extract_text()
+                        if not page_text:
+                            page_text = f"[Page {page_num + 1}: No extractable text]"
                         
                         processed_pages += 1
                         
@@ -99,12 +84,12 @@ class PDFProcessor:
             
             # Fallback to PyMuPDF
             try:
-                import pymupdf as fitz  # PyMuPDF
+                import pymupdf  # PyMuPDF
                 
                 current_chunk = ""
                 processed_pages = 0
                 
-                doc = fitz.open(pdf_path)
+                doc = pymupdf.open(pdf_path)
                 for page_num in range(len(doc)):
                     try:
                         page = doc.load_page(page_num)
@@ -194,8 +179,8 @@ class PDFProcessor:
         
         try:
             # Try with PyMuPDF first
-            import pymupdf as fitz
-            doc = fitz.open(pdf_path)
+            import pymupdf
+            doc = pymupdf.open(pdf_path)
             logger.info(f"Opened PDF with {len(doc)} pages for image extraction")
             
             for page_num in range(len(doc)):
