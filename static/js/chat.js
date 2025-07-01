@@ -20,6 +20,7 @@ class PDFChatApp {
         this.documentsList = document.getElementById('documentsList');
         this.docCount = document.getElementById('docCount');
         this.clearSessionBtn = document.getElementById('clearSession');
+        this.compareDocsBtn = document.getElementById('compareDocsBtn');
         this.typingIndicator = document.getElementById('typingIndicator');
         this.totalChunks = document.getElementById('totalChunks');
         this.sessionDocs = document.getElementById('sessionDocs');
@@ -106,6 +107,11 @@ class PDFChatApp {
         }
         if (clearChatBtnMobile) {
             clearChatBtnMobile.addEventListener('click', () => this.clearChatHistory());
+        }
+        
+        // Compare documents button
+        if (this.compareDocsBtn) {
+            this.compareDocsBtn.addEventListener('click', () => this.compareDocuments());
         }
         
         // Initialize voice input by default
@@ -534,6 +540,11 @@ class PDFChatApp {
         const count = this.documentsList.children.length;
         this.docCount.textContent = count;
         this.sessionDocs.textContent = count;
+        
+        // Enable/disable compare button based on document count
+        if (this.compareDocsBtn) {
+            this.compareDocsBtn.disabled = count < 2;
+        }
     }
     
     updateInputState() {
@@ -1331,6 +1342,66 @@ class PDFChatApp {
                 .catch(error => {
                     console.error('Error clearing backend chat:', error);
                 });
+        }
+    }
+    
+    async compareDocuments() {
+        // Get all uploaded documents
+        try {
+            const response = await fetch('/documents');
+            if (!response.ok) throw new Error('Failed to fetch documents');
+            
+            const documents = await response.json();
+            
+            if (documents.length < 2) {
+                this.showError('You need at least 2 documents to compare. Please upload more documents.');
+                return;
+            }
+            
+            // Create comparison request with all document IDs
+            const documentIds = documents.map(doc => doc.id);
+            
+            // Show loading state
+            this.compareDocsBtn.disabled = true;
+            this.compareDocsBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Comparing...';
+            
+            const compareResponse = await fetch('/compare-documents', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ document_ids: documentIds })
+            });
+            
+            if (!compareResponse.ok) throw new Error('Failed to compare documents');
+            
+            const comparisonResult = await compareResponse.json();
+            
+            // Add comparison result to chat
+            this.addMessageToChat('assistant', 
+                `📊 **Document Comparison Results**\n\n` +
+                `**Documents Compared:** ${comparisonResult.documents_compared.map(doc => doc.filename).join(', ')}\n\n` +
+                `**Common Themes:**\n${comparisonResult.comparison.common_themes.map(theme => `• ${theme}`).join('\n')}\n\n` +
+                `**Key Differences:**\n${comparisonResult.comparison.differences.map(diff => `• ${diff}`).join('\n')}\n\n` +
+                `**Document Summaries:**\n${Object.entries(comparisonResult.comparison.document_summaries || {}).map(([key, summary]) => `**${key}:** ${summary}`).join('\n\n')}`,
+                [{
+                    type: 'comparison',
+                    title: 'Document Comparison',
+                    snippet: `Compared ${documents.length} documents`,
+                    source: 'AI Analysis'
+                }]
+            );
+            
+            // Scroll to show new message
+            this.scrollToBottom();
+            
+        } catch (error) {
+            console.error('Error comparing documents:', error);
+            this.showError('Failed to compare documents. Please try again.');
+        } finally {
+            // Reset button state
+            this.compareDocsBtn.disabled = false;
+            this.compareDocsBtn.innerHTML = '<i class="fas fa-balance-scale me-1"></i> Compare Documents';
         }
     }
 }
