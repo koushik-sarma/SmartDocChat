@@ -45,14 +45,8 @@ def index():
 def upload_file():
     """Handle PDF file upload."""
     try:
-        # Check for file in request with better error handling
-        try:
-            files = request.files
-        except Exception as e:
-            logger.error(f"Error accessing request.files: {e}")
-            return jsonify({'error': 'Invalid file upload request'}), 400
-            
-        if 'file' not in files:
+        # Handle request parsing more gracefully
+        if not hasattr(request, 'files') or 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
@@ -279,10 +273,55 @@ def clear_session():
             Document.query.filter_by(session_id=session_id).delete()
             db.session.commit()
             
+            # Clear vector store data for this session
+            try:
+                chat_service.clear_session_data(session_id)
+            except Exception as e:
+                logger.error(f"Error clearing vector store data: {e}")
+            
             # Clear session
             session.clear()
         
         return jsonify({'message': 'Session cleared successfully'})
+    except Exception as e:
+        logger.error(f"Error clearing session: {e}")
+        return jsonify({'error': f'Failed to clear session: {str(e)}'}), 500
+
+@app.route('/clear-all-data', methods=['POST'])
+def clear_all_data():
+    """Clear ALL data - useful for testing and complete reset."""
+    try:
+        # Delete all chat messages
+        ChatMessage.query.delete()
+        
+        # Delete all documents and their files
+        documents = Document.query.all()
+        for doc in documents:
+            if os.path.exists(doc.file_path):
+                try:
+                    os.remove(doc.file_path)
+                except OSError:
+                    pass
+        
+        # Delete all document records
+        Document.query.delete()
+        
+        # Delete all user profiles
+        UserProfile.query.delete()
+        
+        db.session.commit()
+        
+        # Clear vector store completely
+        try:
+            chat_service.vector_store.clear()
+            chat_service.vector_store.save("vector_store")
+        except Exception as e:
+            logger.error(f"Error clearing vector store: {e}")
+        
+        # Clear session
+        session.clear()
+        
+        return jsonify({'message': 'All data cleared successfully'})
         
     except Exception as e:
         logger.error(f"Error clearing session: {e}")

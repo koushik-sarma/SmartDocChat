@@ -149,10 +149,45 @@ Please provide a helpful answer based on the available context. Use 📘 to indi
         }
     
     def clear_session_data(self, session_id: str):
-        """Clear data for a specific session (if needed)."""
-        # For now, we keep all data across sessions
-        # This could be extended to support session-specific data
-        pass
+        """Clear data for a specific session by rebuilding vector store from active sessions."""
+        try:
+            from models import Document
+            
+            # After clearing this session's documents from DB, get ALL remaining active documents
+            # This rebuilds the vector store with only documents that still exist
+            remaining_docs = Document.query.filter(Document.is_active == True).all()
+            
+            # Rebuild vector store with only remaining documents
+            self.vector_store.clear()
+            
+            if remaining_docs:
+                # Re-process all remaining documents
+                for doc in remaining_docs:
+                    if os.path.exists(doc.file_path):
+                        try:
+                            # Use DocumentProcessor for multi-format support
+                            from document_processor import DocumentProcessor
+                            processor = DocumentProcessor()
+                            
+                            text_chunks = list(processor.extract_text_chunks(doc.file_path))
+                            if text_chunks:
+                                self.vector_store.add_texts(text_chunks, doc.id)
+                        except Exception as e:
+                            logger.error(f"Error re-processing document {doc.id}: {e}")
+                
+                # Save the rebuilt vector store
+                self.vector_store.save("vector_store")
+                logger.info(f"Rebuilt vector store with {len(remaining_docs)} remaining documents")
+            else:
+                # No documents left, clear and save empty store
+                self.vector_store.save("vector_store")
+                logger.info("Cleared vector store - no documents remaining")
+                
+        except Exception as e:
+            logger.error(f"Error clearing session data: {e}")
+            # If rebuilding fails, just clear everything to be safe
+            self.vector_store.clear()
+            self.vector_store.save("vector_store")
     
     def _extract_relevant_images(self, pdf_doc_ids: set, query: str, sources: list, relevant_chunks: List[Tuple[str, float, int]] = None):
         """Extract images from PDFs based on content relevance and add them to sources."""
