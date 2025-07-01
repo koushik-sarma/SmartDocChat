@@ -268,6 +268,30 @@ def clear_session():
         logger.error(f"Error clearing session: {e}")
         return jsonify({'error': f'Failed to clear session: {str(e)}'}), 500
 
+@app.route('/clear-chat', methods=['POST'])
+def clear_chat():
+    """Clear chat messages only, keep documents."""
+    try:
+        session_id = session.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No active session'}), 400
+        
+        # Delete chat messages for this session
+        message_count = ChatMessage.query.filter_by(session_id=session_id).count()
+        ChatMessage.query.filter_by(session_id=session_id).delete()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Chat history cleared. Removed {message_count} messages.',
+            'messages_deleted': message_count
+        })
+        
+    except Exception as e:
+        logger.error(f"Error clearing chat: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/delete-document/<int:doc_id>', methods=['DELETE'])
 def delete_document(doc_id):
     """Delete a specific document."""

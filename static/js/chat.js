@@ -98,6 +98,16 @@ class PDFChatApp {
             voiceInputBtn.addEventListener('click', () => this.startVoiceRecognition());
         }
         
+        // Clear chat buttons (desktop and mobile)
+        const clearChatBtn = document.getElementById('clearChatBtn');
+        const clearChatBtnMobile = document.getElementById('clearChatBtnMobile');
+        if (clearChatBtn) {
+            clearChatBtn.addEventListener('click', () => this.clearChatHistory());
+        }
+        if (clearChatBtnMobile) {
+            clearChatBtnMobile.addEventListener('click', () => this.clearChatHistory());
+        }
+        
         // Initialize voice input by default
         this.initializeVoiceInput();
         
@@ -106,60 +116,30 @@ class PDFChatApp {
     }
     
     attachExistingDocumentListeners() {
-        // Attach event listeners to documents that exist on page load
-        const existingDocs = this.documentsList.querySelectorAll('.document-item');
-        existingDocs.forEach(docDiv => {
-            const docId = docDiv.dataset.docId;
-            
-            // Check if this document already has controls
-            let toggleCheckbox = docDiv.querySelector('.doc-toggle');
-            let deleteButton = docDiv.querySelector('.delete-doc-btn');
-            
-            // If no controls exist, add them
-            if (!toggleCheckbox || !deleteButton) {
-                // Replace the existing content with proper controls
-                const filename = docDiv.querySelector('.fw-bold').textContent;
-                const chunkText = docDiv.querySelector('.text-muted').textContent;
+        // Load documents from backend to ensure consistency
+        this.loadDocumentsFromBackend();
+    }
+    
+    async loadDocumentsFromBackend() {
+        try {
+            const response = await fetch('/documents');
+            if (response.ok) {
+                const documents = await response.json();
                 
-                docDiv.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <div class="form-check me-2">
-                            <input class="form-check-input doc-toggle" type="checkbox" 
-                                   checked 
-                                   data-doc-id="${docId}"
-                                   title="Include in context">
-                        </div>
-                        <i class="fas fa-file-pdf text-danger me-2"></i>
-                        <div class="flex-grow-1">
-                            <div class="small fw-bold text-truncate">${filename}</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">
-                                ${chunkText}
-                            </div>
-                        </div>
-                        <button class="btn btn-sm btn-outline-danger ms-2 delete-doc-btn" 
-                                data-doc-id="${docId}" 
-                                title="Delete document">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
+                // Clear existing documents list to avoid duplicates
+                this.documentsList.innerHTML = '';
                 
-                // Get the new elements after replacing content
-                toggleCheckbox = docDiv.querySelector('.doc-toggle');
-                deleteButton = docDiv.querySelector('.delete-doc-btn');
+                // Add each document with proper controls
+                documents.forEach(doc => {
+                    this.addDocumentToList(doc);
+                });
+                
+                this.updateDocumentCount();
+                this.updateInputState();
             }
-            
-            // Add event listeners
-            if (toggleCheckbox && !toggleCheckbox.hasAttribute('data-listener-attached')) {
-                toggleCheckbox.addEventListener('change', (e) => this.toggleDocumentActive(e));
-                toggleCheckbox.setAttribute('data-listener-attached', 'true');
-            }
-            
-            if (deleteButton && !deleteButton.hasAttribute('data-listener-attached')) {
-                deleteButton.addEventListener('click', (e) => this.deleteDocument(e));
-                deleteButton.setAttribute('data-listener-attached', 'true');
-            }
-        });
+        } catch (error) {
+            console.error('Error loading documents:', error);
+        }
     }
     
     async handleFileUpload(event) {
@@ -429,8 +409,8 @@ class PDFChatApp {
         content = content.replace(/([A-Za-z])_([a-z])/g, '$1<sub>$2</sub>');
         
         // Convert caret notation to superscripts (x^2 becomes x²)
-        content = content.replace(/([A-Za-z0-9])\\^(\d+)/g, '$1<sup>$2</sup>');
-        content = content.replace(/([A-Za-z0-9])\\^([+-])/g, '$1<sup>$2</sup>');
+        content = content.replace(/([A-Za-z0-9])\^(\d+)/g, '$1<sup>$2</sup>');
+        content = content.replace(/([A-Za-z0-9])\^([+-])/g, '$1<sup>$2</sup>');
         
         // Handle common chemical reaction arrows
         content = content.replace(/→/g, '<span class="reaction-arrow">→</span>');
@@ -1275,6 +1255,31 @@ class PDFChatApp {
             } else {
                 refreshBtn.style.display = 'none';
             }
+        }
+    }
+    
+    clearChatHistory() {
+        if (confirm('Are you sure you want to clear all chat messages? This cannot be undone.')) {
+            // Clear chat messages from UI
+            this.chatMessages.innerHTML = '';
+            
+            // Hide refresh button
+            this.updateRefreshButtonVisibility();
+            
+            // Show success message
+            this.showUploadStatus('🧹 Chat history cleared successfully', 'success');
+            
+            // Optional: Also clear from backend
+            fetch('/clear-chat', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Chat history cleared from backend');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing backend chat:', error);
+                });
         }
     }
 }
