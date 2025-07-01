@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend Test</title>
+</head>
+<body>
+    <h1>Testing Frontend Upload</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".pdf,.docx,.txt,.md">
+        <button type="submit">Upload</button>
+    </form>
+    
+    <h2>Test Chat</h2>
+    <form action="/chat" method="post">
+        <input type="hidden" name="Content-Type" value="application/json">
+        <input type="text" name="message" placeholder="Ask a question" value="What chemical equations are in the document?">
+        <button type="submit">Send</button>
+    </form>
+</body>
+</html>
