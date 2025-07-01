@@ -417,27 +417,11 @@ class PDFChatApp {
         content = content.replace(/([A-Za-z0-9])\^(\d+)/g, '$1<sup>$2</sup>');
         content = content.replace(/([A-Za-z0-9])\^([+-])/g, '$1<sup>$2</sup>');
         
-        // Handle common chemical reaction arrows
-        content = content.replace(/→/g, '<span class="reaction-arrow">→</span>');
-        content = content.replace(/←/g, '<span class="reaction-arrow">←</span>');
-        content = content.replace(/↔/g, '<span class="reaction-arrow">↔</span>');
-        content = content.replace(/⇌/g, '<span class="reaction-arrow">⇌</span>');
-        content = content.replace(/ -> /g, ' <span class="reaction-arrow">→</span> ');
-        content = content.replace(/ <- /g, ' <span class="reaction-arrow">←</span> ');
-        content = content.replace(/ <-> /g, ' <span class="reaction-arrow">↔</span> ');
-        content = content.replace(/ <=> /g, ' <span class="reaction-arrow">⇌</span> ');
-        
-        // Highlight Greek letters and special symbols
-        content = content.replace(/\b(alpha|beta|gamma|delta|epsilon|lambda|mu|pi|sigma|theta|phi|omega)\b/gi, '<span class="greek-letter">$1</span>');
-        content = content.replace(/\b(α|β|γ|δ|ε|λ|μ|π|σ|θ|φ|ω|Δ|Ω)\b/g, '<span class="greek-letter">$1</span>');
-        
-        // Highlight common chemistry terms and formulas
-        content = content.replace(/\b([A-Z][a-z]?(?:<sub>\d+</sub>)*(?:<sup>[+-]?\d*</sup>)*)\b/g, '<span class="chemical-formula">$1</span>');
-        
-        // Special symbols
-        content = content.replace(/±/g, '<span class="symbol">±</span>');
-        content = content.replace(/°/g, '<span class="symbol">°</span>');
-        content = content.replace(/∞/g, '<span class="symbol">∞</span>');
+        // Handle common chemical reaction arrows (simple string replacement)
+        content = content.replace(' -> ', ' → ');
+        content = content.replace(' <- ', ' ← ');
+        content = content.replace(' <-> ', ' ↔ ');
+        content = content.replace(' <=> ', ' ⇌ ');
         
         return content;
     }
