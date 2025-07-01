@@ -12,14 +12,12 @@ from pdf_processor import PDFProcessor
 from document_processor import DocumentProcessor
 from chat_service import ChatService
 from tts_service import SimpleTTSWrapper
-from basic_pdf_compressor import BasicPDFCompressor
 
 logger = logging.getLogger(__name__)
 
 # Initialize services
 pdf_processor = PDFProcessor()
 chat_service = ChatService()
-pdf_compressor = BasicPDFCompressor()
 tts_service = SimpleTTSWrapper()
 
 def allowed_file(filename):
@@ -590,136 +588,3 @@ def compare_documents():
     except Exception as e:
         logger.error(f"Error comparing documents: {e}")
         return jsonify({'error': f'Document comparison failed: {str(e)}'}), 500
-
-@app.route('/compress-pdf', methods=['POST'])
-def compress_pdf():
-    """Compress a PDF file to reduce its size."""
-    try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file uploaded'}), 400
-        
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        # Validate file type
-        if not file.filename.lower().endswith('.pdf'):
-            return jsonify({'error': 'Only PDF files are supported for compression'}), 400
-        
-        # Get compression level from request
-        compression_level = request.form.get('compression_level', 'medium')
-        if compression_level not in ['low', 'medium', 'high', 'extreme']:
-            compression_level = 'medium'
-        
-        # Save uploaded file temporarily
-        temp_dir = os.path.join(os.getcwd(), 'uploads')
-        os.makedirs(temp_dir, exist_ok=True)
-        
-        timestamp = int(datetime.now().timestamp())
-        original_filename = secure_filename(file.filename)
-        temp_input_path = os.path.join(temp_dir, f"{timestamp}_{original_filename}")
-        
-        file.save(temp_input_path)
-        
-        # Compress the PDF
-        result = pdf_compressor.compress_pdf(
-            temp_input_path, 
-            compression_level=compression_level
-        )
-        
-        if result.get('success'):
-            # Return compression results
-            return jsonify({
-                'success': True,
-                'message': f'PDF compressed successfully with {compression_level} compression',
-                'original_size_mb': round(result['original_size'] / 1024 / 1024, 2),
-                'compressed_size_mb': round(result['compressed_size'] / 1024 / 1024, 2),
-                'compression_ratio': result['compression_ratio'],
-                'size_reduction_mb': result['size_reduction_mb'],
-                'pages_processed': result['pages_processed'],
-                'images_compressed': result['images_compressed'],
-                'download_url': f'/download-compressed/{timestamp}_{original_filename}',
-                'filename': f"{original_filename.replace('.pdf', '')}_compressed.pdf"
-            })
-        else:
-            # Clean up on failure
-            try:
-                os.remove(temp_input_path)
-            except:
-                pass
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Compression failed')
-            }), 500
-            
-    except Exception as e:
-        logger.error(f"Error in PDF compression: {e}")
-        return jsonify({'error': f'Compression failed: {str(e)}'}), 500
-
-@app.route('/compression-estimate', methods=['POST'])
-def get_compression_estimate():
-    """Get compression estimate for a PDF without actually compressing it."""
-    try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file uploaded'}), 400
-        
-        file = request.files['file']
-        if not file.filename.lower().endswith('.pdf'):
-            return jsonify({'error': 'Only PDF files are supported'}), 400
-        
-        # Save file temporarily for analysis
-        temp_dir = os.path.join(os.getcwd(), 'uploads')
-        os.makedirs(temp_dir, exist_ok=True)
-        
-        timestamp = int(datetime.now().timestamp())
-        temp_path = os.path.join(temp_dir, f"estimate_{timestamp}_{secure_filename(file.filename)}")
-        
-        file.save(temp_path)
-        
-        # Get compression estimate
-        estimate = pdf_compressor.get_compression_estimate(temp_path)
-        
-        # Clean up
-        try:
-            os.remove(temp_path)
-        except:
-            pass
-        
-        if 'error' in estimate:
-            return jsonify({'error': estimate['error']}), 500
-        
-        return jsonify({
-            'file_size_mb': round(estimate['file_size'] / 1024 / 1024, 2),
-            'total_images': estimate['total_images'],
-            'large_images': estimate['large_images'],
-            'estimated_savings_mb': round(estimate['estimated_savings_bytes'] / 1024 / 1024, 2),
-            'estimated_compression_ratio': estimate['estimated_compression_ratio'],
-            'recommended_level': estimate['recommendation']
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting compression estimate: {e}")
-        return jsonify({'error': f'Failed to analyze PDF: {str(e)}'}), 500
-
-@app.route('/download-compressed/<filename>')
-def download_compressed_pdf(filename):
-    """Download compressed PDF file."""
-    try:
-        # Find the compressed file
-        uploads_dir = os.path.join(os.getcwd(), 'uploads')
-        compressed_filename = filename.replace('.pdf', '_compressed.pdf')
-        file_path = os.path.join(uploads_dir, compressed_filename)
-        
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'Compressed file not found'}), 404
-        
-        return send_from_directory(
-            uploads_dir, 
-            compressed_filename,
-            as_attachment=True,
-            download_name=compressed_filename
-        )
-        
-    except Exception as e:
-        logger.error(f"Error downloading compressed PDF: {e}")
-        return jsonify({'error': 'Download failed'}), 500

@@ -141,9 +141,6 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - July 1, 2025: Fixed missing PyMuPDF extraction method preventing large file processing
 - July 1, 2025: Corrected type errors in chat service causing null response crashes
 - July 1, 2025: Verified complete functionality: uploads (text/PDF), chat with document context, session isolation
-- July 1, 2025: Successfully implemented PDF compression feature with SmallPDF-like functionality
-- July 1, 2025: Added compression estimates, multiple quality levels, and instant download capability
-- July 1, 2025: Tested compression workflow with 32MB PDF - achieved 15% size reduction (32.45MB → 27.58MB)
 
 ## Phase 1 Complete - Checkpoint
 Successfully implemented comprehensive PDF chat application with:
