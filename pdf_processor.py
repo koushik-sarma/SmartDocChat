@@ -88,8 +88,8 @@ class PDFProcessor:
                     
                 logger.info(f"Successfully processed {processed_pages} pages")
                 
-        except Exception as e:
-            logger.error(f"pdfplumber processing failed: {str(e)}")
+        except (Exception, SystemExit, BaseException) as e:
+            logger.error(f"pdfplumber processing failed: {str(e)} (type: {type(e).__name__})")
             logger.info("Attempting fallback with PyMuPDF...")
             
             # Fallback to PyMuPDF

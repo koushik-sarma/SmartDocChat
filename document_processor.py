@@ -74,8 +74,8 @@ class DocumentProcessor:
                 if current_chunk.strip():
                     yield current_chunk
                     
-        except Exception as e:
-            logger.error(f"PDF extraction failed: {e}")
+        except (Exception, SystemExit, BaseException) as e:
+            logger.error(f"PDF extraction failed: {e} (type: {type(e).__name__})")
             # Fallback to PyMuPDF if available
             try:
                 import pymupdf as fitz
