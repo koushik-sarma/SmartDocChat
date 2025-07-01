@@ -111,6 +111,9 @@ class PDFChatApp {
         // Initialize voice input by default
         this.initializeVoiceInput();
         
+        // Format existing messages on page load
+        this.formatExistingMessages();
+        
         // Enable input when documents are present
         this.updateInputState();
     }
@@ -118,6 +121,21 @@ class PDFChatApp {
     attachExistingDocumentListeners() {
         // Load documents from backend to ensure consistency
         this.loadDocumentsFromBackend();
+    }
+    
+    formatExistingMessages() {
+        // Find all existing message-text elements and apply formatting
+        const existingMessages = this.chatMessages.querySelectorAll('.message-text');
+        existingMessages.forEach(messageElement => {
+            const content = messageElement.textContent || messageElement.innerText;
+            if (content) {
+                // Apply the same formatting as new messages
+                const formattedContent = this.formatMessageContent(content);
+                messageElement.innerHTML = formattedContent;
+            }
+        });
+        
+        console.log(`Formatted ${existingMessages.length} existing messages`);
     }
     
     async loadDocumentsFromBackend() {
