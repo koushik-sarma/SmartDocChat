@@ -80,20 +80,39 @@ def upload_file():
         
         # Process document (PDF, DOCX, TXT, MD)
         try:
-            # Use DocumentProcessor for multi-format support
-            doc_processor = DocumentProcessor()
+            file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
             
-            # Validate document file before processing
-            if not doc_processor.is_supported_format(file.filename):
-                raise ValueError("Unsupported file format")
-            
-            # Extract text chunks
-            chunks = []
-            try:
-                chunk_generator = doc_processor.extract_text_chunks(file_path)
-                chunks = list(chunk_generator)
-            except Exception as e:
-                raise ValueError(f"Could not extract text from document: {str(e)}")
+            # Use appropriate processor based on file type
+            if file_extension == 'pdf':
+                # Use PDFProcessor for PDF files (proven stable)
+                try:
+                    pdf_info = pdf_processor.get_pdf_info(file_path)
+                    if pdf_info['page_count'] == 0:
+                        raise ValueError("PDF file contains no readable pages")
+                except Exception as e:
+                    raise ValueError(f"Invalid PDF file: {str(e)}")
+                
+                # Extract text chunks from PDF
+                chunks = []
+                try:
+                    chunk_generator = pdf_processor.extract_text_chunks(file_path)
+                    chunks = list(chunk_generator)
+                except Exception as e:
+                    raise ValueError(f"Could not extract text from PDF: {str(e)}")
+            else:
+                # Use DocumentProcessor for other formats (DOCX, TXT, MD)
+                doc_processor = DocumentProcessor()
+                
+                if not doc_processor.is_supported_format(file.filename):
+                    raise ValueError("Unsupported file format")
+                
+                # Extract text chunks from document
+                chunks = []
+                try:
+                    chunk_generator = doc_processor.extract_text_chunks(file_path)
+                    chunks = list(chunk_generator)
+                except Exception as e:
+                    raise ValueError(f"Could not extract text from document: {str(e)}")
             
             if not chunks:
                 raise ValueError("No text content could be extracted from the document")

@@ -48,7 +48,14 @@ class DocumentProcessor:
                 
                 for page_num, page in enumerate(pdf.pages):
                     try:
-                        text = page.extract_text()
+                        # Add timeout and error handling for problematic PDFs
+                        text = None
+                        try:
+                            text = page.extract_text()
+                        except Exception as extract_error:
+                            logger.warning(f"Failed to extract text from page {page_num + 1} with pdfplumber: {extract_error}")
+                            continue
+                            
                         if text:
                             clean_text = self._clean_text(text)
                             current_chunk += " " + clean_text
