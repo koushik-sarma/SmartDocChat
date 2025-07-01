@@ -1378,12 +1378,31 @@ class PDFChatApp {
             const comparisonResult = await compareResponse.json();
             
             // Add comparison result to chat
-            this.addMessageToChat('assistant', 
-                `📊 **Document Comparison Results**\n\n` +
-                `**Documents Compared:** ${comparisonResult.documents_compared.map(doc => doc.filename).join(', ')}\n\n` +
-                `**Common Themes:**\n${comparisonResult.comparison.common_themes.map(theme => `• ${theme}`).join('\n')}\n\n` +
-                `**Key Differences:**\n${comparisonResult.comparison.differences.map(diff => `• ${diff}`).join('\n')}\n\n` +
-                `**Document Summaries:**\n${Object.entries(comparisonResult.comparison.document_summaries || {}).map(([key, summary]) => `**${key}:** ${summary}`).join('\n\n')}`,
+            const comparison = comparisonResult.comparison;
+            let resultText = `📊 **Document Comparison Results**\n\n`;
+            
+            if (comparisonResult.documents_compared) {
+                resultText += `**Documents Compared:** ${comparisonResult.documents_compared.map(doc => doc.filename).join(', ')}\n\n`;
+            }
+            
+            if (comparison.common_themes && comparison.common_themes.length > 0) {
+                resultText += `**Common Themes:**\n${comparison.common_themes.map(theme => `• ${theme}`).join('\n')}\n\n`;
+            }
+            
+            if (comparison.word_counts) {
+                resultText += `**Document Sizes:**\n${Object.entries(comparison.word_counts).map(([doc, count]) => `• ${doc}: ${count} words`).join('\n')}\n\n`;
+            }
+            
+            if (comparison.unique_content) {
+                resultText += `**Unique Content Per Document:**\n`;
+                Object.entries(comparison.unique_content).forEach(([doc, content]) => {
+                    if (content.length > 0) {
+                        resultText += `**${doc}:** ${content.slice(0, 5).join(', ')}${content.length > 5 ? '...' : ''}\n\n`;
+                    }
+                });
+            }
+            
+            this.addMessageToChat('assistant', resultText,
                 [{
                     type: 'comparison',
                     title: 'Document Comparison',
