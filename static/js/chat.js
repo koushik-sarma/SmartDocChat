@@ -456,16 +456,22 @@ class PDFChatApp {
         content = content.replace(/\b([A-Za-z]+)(\d+)\+(\d+)\b/g, '$1$2<sup>+$3</sup>');
         content = content.replace(/\b([A-Za-z]+)(\d+)-(\d+)\b/g, '$1$2<sup>-$3</sup>');
         
-        // Handle common chemical reaction arrows
-        content = content.replace(/-->/g, ' → ');
-        content = content.replace(/->/g, ' → ');
-        content = content.replace(/<--/g, ' ← ');
-        content = content.replace(/<->/g, ' ↔ ');
-        content = content.replace(/<=>/g, ' ⇌ ');
-        content = content.replace(' -> ', ' → ');
-        content = content.replace(' <- ', ' ← ');
-        content = content.replace(' <-> ', ' ↔ ');
-        content = content.replace(' <=> ', ' ⇌ ');
+        // Handle common chemical reaction arrows (comprehensive coverage)
+        content = content.replace(/\s*-->\s*/g, ' → ');
+        content = content.replace(/\s*->\s*/g, ' → ');
+        content = content.replace(/\s*<--\s*/g, ' ← ');
+        content = content.replace(/\s*<->\s*/g, ' ↔ ');
+        content = content.replace(/\s*<=>\s*/g, ' ⇌ ');
+        content = content.replace(/\s*→\s*/g, ' → ');
+        content = content.replace(/\s*←\s*/g, ' ← ');
+        content = content.replace(/\s*↔\s*/g, ' ↔ ');
+        content = content.replace(/\s*⇌\s*/g, ' ⇌ ');
+        
+        // Handle text-based arrows
+        content = content.replace(/\brightarrow\b/g, '→');
+        content = content.replace(/\bleftarrow\b/g, '←');
+        content = content.replace(/\bleftrightarrow\b/g, '↔');
+        content = content.replace(/\brightleftarrow\b/g, '↔');
         
         return content;
     }

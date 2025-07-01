@@ -3,6 +3,15 @@ import logging
 from typing import List, Generator, Dict
 import os
 import re
+import base64
+import io
+
+try:
+    import fitz  # PyMuPDF
+    PYMUPDF_AVAILABLE = True
+except ImportError:
+    PYMUPDF_AVAILABLE = False
+    logging.warning("PyMuPDF not available - image extraction will be limited")
 
 logger = logging.getLogger(__name__)
 
@@ -218,8 +227,10 @@ class PDFProcessor:
         
         try:
             # Try with PyMuPDF first
-            import pymupdf
-            doc = pymupdf.open(pdf_path)
+            if not PYMUPDF_AVAILABLE:
+                raise ImportError("PyMuPDF not available")
+            
+            doc = fitz.open(pdf_path)
             logger.info(f"Opened PDF with {len(doc)} pages for image extraction")
             
             for page_num in range(len(doc)):

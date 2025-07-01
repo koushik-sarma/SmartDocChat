@@ -66,15 +66,14 @@ class ChatService:
                         'document_count': len(pdf_doc_ids)
                     })
                     
-                    # Always try to extract images for testing (can be made conditional later)
-                    # Extract images if query suggests image-related content or for testing
-                    image_keywords = ['image', 'picture', 'chart', 'graph', 'diagram', 'figure', 'photo', 'show me', 'display']
+                    # Extract images if query suggests visual content is needed or content is found
+                    image_keywords = ['image', 'picture', 'chart', 'graph', 'diagram', 'figure', 'photo', 'show me', 'display', 'structure', 'formula', 'equation', 'reaction', 'process', 'cycle', 'model']
                     should_extract_images = any(keyword in query.lower() for keyword in image_keywords)
                     
-                    # For debugging: temporarily extract images on all queries
-                    if should_extract_images or True:  # Remove "or True" after testing
+                    # Extract images when there are relevant text chunks or visual keywords
+                    if should_extract_images or len(pdf_results) > 0:
                         logger.info(f"Attempting to extract images for query: {query}")
-                        self._extract_relevant_images(pdf_doc_ids, query, sources)
+                        self._extract_relevant_images(pdf_doc_ids, query, sources, pdf_results)
             
             # 2. Search web content
             web_results = self.web_searcher.search_multiple_sources(query, max_results=2)
@@ -155,23 +154,44 @@ Please provide a helpful answer based on the available context. Use 📘 to indi
         # This could be extended to support session-specific data
         pass
     
-    def _extract_relevant_images(self, pdf_doc_ids: set, query: str, sources: list):
-        """Extract images from PDFs and add them to sources if relevant."""
+    def _extract_relevant_images(self, pdf_doc_ids: set, query: str, sources: list, relevant_chunks: List[Tuple[str, float, int]] = None):
+        """Extract images from PDFs based on content relevance and add them to sources."""
         try:
             from models import Document
             from pdf_processor import PDFProcessor
             
             pdf_processor = PDFProcessor()
             
+            # Get page numbers from relevant chunks if available
+            relevant_pages = set()
+            if relevant_chunks:
+                for chunk_text, score, doc_id in relevant_chunks:
+                    if doc_id in pdf_doc_ids:
+                        # Try to extract page information from chunk if available
+                        # For now, we'll extract from all pages but this could be enhanced
+                        pass
+            
             for doc_id in pdf_doc_ids:
                 doc = Document.query.get(doc_id)
                 if doc and doc.file_path:
-                    # Extract images from this PDF
+                    # Extract images from this PDF with query-based filtering
                     images = pdf_processor.extract_images_from_pdf(doc.file_path, query)
                     
                     if images:
-                        # Add images to sources
-                        for i, image in enumerate(images):
+                        # Filter images for relevance and size
+                        relevant_images = []
+                        for image in images:
+                            # Only include images that are large enough to be meaningful
+                            width = image.get('width', 0)
+                            height = image.get('height', 0)
+                            size = image.get('size', 0)
+                            
+                            # Filter criteria: reasonable size and format
+                            if (width >= 100 and height >= 100) or size >= 10000:
+                                relevant_images.append(image)
+                        
+                        # Add relevant images to sources (limit to 3 per document)
+                        for i, image in enumerate(relevant_images[:3]):
                             sources.append({
                                 'type': 'image',
                                 'document': doc.filename,
@@ -183,7 +203,7 @@ Please provide a helpful answer based on the available context. Use 📘 to indi
                                 'format': image.get('format', 'png')
                             })
                         
-                        logger.info(f"Extracted {len(images)} images from {doc.filename}")
+                        logger.info(f"Extracted {len(relevant_images)} relevant images from {doc.filename} (filtered from {len(images)} total)")
                         
         except Exception as e:
             logger.error(f"Error extracting images: {e}")

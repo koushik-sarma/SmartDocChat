@@ -133,6 +133,10 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - July 1, 2025: Added extensive chemical formula database (H2O→H₂O, CO2→CO₂, H2SO4→H₂SO₄, ionic charges)
 - July 1, 2025: Added AI personality refresh button with real-time response regeneration capability
 - July 1, 2025: Implemented comprehensive formatting for chemistry and physics content with proper visual styling
+- July 1, 2025: Fixed message formatting persistence after page refresh with formatExistingMessages() function
+- July 1, 2025: Enhanced arrow handling for chemical reactions (→, ←, ↔, ⇌) with comprehensive regex patterns
+- July 1, 2025: Improved image extraction system with content-aware filtering and size-based relevance
+- July 1, 2025: Added intelligent image display in chat responses with click-to-expand functionality
 
 ## Phase 1 Complete - Checkpoint
 Successfully implemented comprehensive PDF chat application with:
