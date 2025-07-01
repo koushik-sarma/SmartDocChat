@@ -45,7 +45,14 @@ def index():
 def upload_file():
     """Handle PDF file upload."""
     try:
-        if 'file' not in request.files:
+        # Check for file in request with better error handling
+        try:
+            files = request.files
+        except Exception as e:
+            logger.error(f"Error accessing request.files: {e}")
+            return jsonify({'error': 'Invalid file upload request'}), 400
+            
+        if 'file' not in files:
             return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
@@ -54,6 +61,17 @@ def upload_file():
         
         if not allowed_file(file.filename):
             return jsonify({'error': 'Only PDF, DOCX, TXT, and MD files are allowed'}), 400
+        
+        # Check file size before processing (50MB limit)
+        file.seek(0, 2)  # Seek to end of file
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        if file_size > 50 * 1024 * 1024:  # 50MB limit
+            return jsonify({'error': 'File size must be less than 50MB'}), 400
+        
+        if file_size == 0:
+            return jsonify({'error': 'File cannot be empty'}), 400
         
         # Ensure session ID exists
         if 'session_id' not in session:
