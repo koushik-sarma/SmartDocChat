@@ -1,0 +1,171 @@
+/* Light Theme Overrides */
+[data-bs-theme="light"] {
+    --bs-body-bg: #ffffff;
+    --bs-body-color: #212529;
+    --bs-secondary-bg: #f8f9fa;
+    --bs-border-color: #dee2e6;
+}
+
+/* Light theme sidebar styling */
+[data-bs-theme="light"] .sidebar {
+    background-color: #f8f9fa !important;
+    border-right: 1px solid #dee2e6 !important;
+    color: #212529 !important;
+}
+
+[data-bs-theme="light"] .sidebar h5,
+[data-bs-theme="light"] .sidebar h6,
+[data-bs-theme="light"] .sidebar .text-muted {
+    color: #6c757d !important;
+}
+
+[data-bs-theme="light"] .sidebar .border-bottom {
+    border-color: #dee2e6 !important;
+}
+
+[data-bs-theme="light"] .sidebar .border-top {
+    border-color: #dee2e6 !important;
+}
+
+/* Light theme chat area */
+[data-bs-theme="light"] .chat-messages {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+}
+
+[data-bs-theme="light"] .chat-input {
+    background-color: #f8f9fa !important;
+    border-top: 1px solid #dee2e6 !important;
+    color: #212529 !important;
+}
+
+/* Enhanced chat bubbles - Blue for user, Orange for assistant */
+.message.user {
+    background: linear-gradient(135deg, #0d6efd, #0056b3) !important;
+    color: white !important;
+    border-radius: 18px 18px 5px 18px !important;
+    margin-left: 15% !important;
+    margin-right: 5px !important;
+}
+
+.message.assistant {
+    background: linear-gradient(135deg, #fd7e14, #e55a00) !important;
+    color: white !important;
+    border-radius: 18px 18px 18px 5px !important;
+    margin-right: 15% !important;
+    margin-left: 5px !important;
+}
+
+/* Light theme message overrides */
+[data-bs-theme="light"] .message.user {
+    background: linear-gradient(135deg, #0d6efd, #0056b3) !important;
+    color: white !important;
+}
+
+[data-bs-theme="light"] .message.assistant {
+    background: linear-gradient(135deg, #fd7e14, #e55a00) !important;
+    color: white !important;
+}
+
+/* Light theme form controls */
+[data-bs-theme="light"] .form-control,
+[data-bs-theme="light"] .form-select {
+    background-color: #ffffff !important;
+    border-color: #ced4da !important;
+    color: #212529 !important;
+}
+
+[data-bs-theme="light"] .form-control:focus,
+[data-bs-theme="light"] .form-select:focus {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Light theme buttons */
+[data-bs-theme="light"] .btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+[data-bs-theme="light"] .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+/* Light theme document items */
+[data-bs-theme="light"] .document-item {
+    background-color: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+    color: #212529 !important;
+}
+
+[data-bs-theme="light"] .document-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* Light theme badge */
+[data-bs-theme="light"] .badge {
+    color: #ffffff !important;
+}
+
+/* Light theme modal */
+[data-bs-theme="light"] .modal-content {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+}
+
+[data-bs-theme="light"] .modal-header {
+    border-bottom-color: #dee2e6 !important;
+}
+
+[data-bs-theme="light"] .modal-footer {
+    border-top-color: #dee2e6 !important;
+}
+
+/* Message actions styling */
+.message-actions {
+    margin-top: 8px !important;
+}
+
+.message-actions .btn {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+}
+
+/* Sources styling improvements */
+.sources {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    margin-top: 8px !important;
+}
+
+[data-bs-theme="light"] .sources {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    color: #6c757d !important;
+}
+
+.source-item {
+    font-size: 0.8rem !important;
+    margin: 2px 0 !important;
+}
+
+/* Status message improvements */
+.upload-status {
+    font-size: 0.85rem !important;
+    padding: 0.5rem !important;
+    border-radius: 6px !important;
+    margin-top: 0.5rem !important;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .message.user {
+        margin-left: 5% !important;
+    }
+    
+    .message.assistant {
+        margin-right: 5% !important;
+    }
+}

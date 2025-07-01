@@ -118,6 +118,11 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - July 1, 2025: Fixed PDF source deduplication - single entry per document type in Sources
 - July 1, 2025: Implemented PDF image extraction with query-based relevance filtering
 - July 1, 2025: Enhanced voice input with browser speech recognition (Chrome/Edge optimized)
+- July 1, 2025: Fixed session context isolation - documents now properly filtered by session
+- July 1, 2025: Fixed light theme styling with proper text colors and blue/orange chat bubbles  
+- July 1, 2025: Added multi-format document support (PDF, DOCX, TXT, MD files)
+- July 1, 2025: Implemented document comparison and cross-referencing features
+- July 1, 2025: Added automatic response regeneration when AI personality changes
 
 ## Phase 1 Complete - Checkpoint
 Successfully implemented comprehensive PDF chat application with:

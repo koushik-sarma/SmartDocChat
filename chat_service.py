@@ -39,14 +39,20 @@ class ChatService:
             sources = []
             context_parts = []
             
-            # 1. Search PDF content
+            # Get active documents for current session only
+            from models import Document
+            active_docs = Document.query.filter_by(session_id=session_id, is_active=True).all()
+            active_doc_ids = {doc.id for doc in active_docs}
+            
+            # 1. Search PDF content (filtered by session)
             pdf_results = self.vector_store.search(query, k=5)
             
             if pdf_results:
                 pdf_context = []
                 pdf_doc_ids = set()  # Track unique document IDs
                 for text, score, doc_id in pdf_results:
-                    if score > 0.1:  # Lower relevance threshold for better results
+                    # Only include results from current session's active documents
+                    if score > 0.1 and doc_id in active_doc_ids:
                         pdf_context.append(text)
                         pdf_doc_ids.add(doc_id)
                 

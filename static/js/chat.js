@@ -784,6 +784,7 @@ class PDFChatApp {
                 } else {
                     customRoleTextarea.style.display = 'none';
                     this.updateProfile({ ai_role: e.target.value });
+                    this.regenerateLastResponse();
                 }
             });
         }
@@ -890,18 +891,15 @@ class PDFChatApp {
     
     setTheme(theme) {
         const html = document.documentElement;
+        const themeLink = document.getElementById('theme-css');
         
         if (theme === 'light') {
             html.setAttribute('data-bs-theme', 'light');
-            // Update CSS link to light theme
-            const themeLink = document.querySelector('link[href*="bootstrap-agent-dark-theme"]');
             if (themeLink) {
                 themeLink.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
             }
         } else {
             html.setAttribute('data-bs-theme', 'dark');
-            // Update CSS link to dark theme
-            const themeLink = document.querySelector('link[href*="bootstrap"]');
             if (themeLink) {
                 themeLink.href = 'https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css';
             }
@@ -998,6 +996,55 @@ class PDFChatApp {
         const voiceButton = document.getElementById('voiceButton');
         if (voiceButton) {
             voiceButton.remove();
+        }
+    }
+    
+    regenerateLastResponse() {
+        // Find the last user message and regenerate the assistant response
+        const messages = document.querySelectorAll('.message');
+        let lastUserMessage = null;
+        
+        for (let i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].classList.contains('user')) {
+                lastUserMessage = messages[i];
+                break;
+            }
+        }
+        
+        if (lastUserMessage) {
+            const messageText = lastUserMessage.querySelector('.message-text').textContent;
+            
+            // Remove the last assistant response if it exists
+            const lastAssistantMessage = document.querySelector('.message.assistant:last-of-type');
+            if (lastAssistantMessage) {
+                lastAssistantMessage.remove();
+            }
+            
+            // Show typing indicator
+            this.showTyping(true);
+            
+            // Send the message again with new AI personality
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: messageText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                this.showTyping(false);
+                if (data.error) {
+                    this.showError(data.error);
+                } else {
+                    this.addMessageToChat('assistant', data.response, data.sources);
+                    this.scrollToBottom();
+                }
+            })
+            .catch(error => {
+                this.showTyping(false);
+                this.showError('Failed to regenerate response: ' + error.message);
+            });
         }
     }
 }

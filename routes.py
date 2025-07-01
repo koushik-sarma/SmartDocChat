@@ -9,6 +9,7 @@ from app import app, db
 from models import Document, ChatMessage, UserProfile
 from datetime import datetime
 from pdf_processor import PDFProcessor
+from document_processor import DocumentProcessor
 from chat_service import ChatService
 from tts_service import SimpleTTSWrapper
 
@@ -20,8 +21,8 @@ chat_service = ChatService()
 tts_service = SimpleTTSWrapper()
 
 def allowed_file(filename):
-    """Check if file is a PDF."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'pdf'
+    """Check if file format is supported."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'docx', 'txt', 'md'}
 
 @app.route('/')
 def index():
@@ -447,3 +448,33 @@ def get_voices():
     except Exception as e:
         logger.error(f"Error getting voices: {e}")
         return jsonify({'error': 'Failed to get voices'}), 500
+
+@app.route('/compare-documents', methods=['POST'])
+def compare_documents():
+    """Compare multiple documents and return analysis."""
+    try:
+        session_id = session.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No active session'}), 400
+        
+        # Get active documents for current session
+        documents = Document.query.filter_by(session_id=session_id, is_active=True).all()
+        
+        if len(documents) < 2:
+            return jsonify({'error': 'Need at least 2 active documents to compare'}), 400
+        
+        # Collect document paths
+        doc_paths = [doc.file_path for doc in documents]
+        
+        # Use document processor for comparison
+        doc_processor = DocumentProcessor()
+        comparison_result = doc_processor.compare_documents(doc_paths)
+        
+        return jsonify({
+            'message': 'Document comparison completed',
+            'comparison': comparison_result
+        })
+        
+    except Exception as e:
+        logger.error(f"Error comparing documents: {e}")
+        return jsonify({'error': f'Document comparison failed: {str(e)}'}), 500
