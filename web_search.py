@@ -50,10 +50,19 @@ class WebSearcher:
             related_topics = data.get('RelatedTopics', [])
             for topic in related_topics[:max_results-len(results)]:
                 if isinstance(topic, dict) and topic.get('Text'):
+                    # Handle FirstURL which might be a dict or string
+                    first_url = topic.get('FirstURL', {})
+                    if isinstance(first_url, dict):
+                        title = first_url.get('text', 'Related Topic')
+                        url = first_url.get('url', '')
+                    else:
+                        title = 'Related Topic'
+                        url = str(first_url) if first_url else ''
+                    
                     results.append({
-                        'title': topic.get('FirstURL', {}).get('text', 'Related Topic'),
+                        'title': title,
                         'snippet': topic['Text'][:300] + '...' if len(topic['Text']) > 300 else topic['Text'],
-                        'url': topic.get('FirstURL', {}).get('url', ''),
+                        'url': url,
                         'source': 'DuckDuckGo Related'
                     })
             
