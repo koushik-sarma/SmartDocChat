@@ -417,7 +417,33 @@ class PDFChatApp {
         content = content.replace(/([A-Za-z0-9])\^(\d+)/g, '$1<sup>$2</sup>');
         content = content.replace(/([A-Za-z0-9])\^([+-])/g, '$1<sup>$2</sup>');
         
-        // Handle common chemical reaction arrows (simple string replacement)
+        // Handle common chemical formulas with proper subscripts
+        content = content.replace(/\bH2O\b/g, 'H<sub>2</sub>O');
+        content = content.replace(/\bCO2\b/g, 'CO<sub>2</sub>');
+        content = content.replace(/\bNH3\b/g, 'NH<sub>3</sub>');
+        content = content.replace(/\bCH4\b/g, 'CH<sub>4</sub>');
+        content = content.replace(/\bHCl\b/g, 'HCl');
+        content = content.replace(/\bNaCl\b/g, 'NaCl');
+        content = content.replace(/\bCaCO3\b/g, 'CaCO<sub>3</sub>');
+        content = content.replace(/\bH2SO4\b/g, 'H<sub>2</sub>SO<sub>4</sub>');
+        content = content.replace(/\bHNO3\b/g, 'HNO<sub>3</sub>');
+        content = content.replace(/\bNaOH\b/g, 'NaOH');
+        content = content.replace(/\bO2\b/g, 'O<sub>2</sub>');
+        content = content.replace(/\bN2\b/g, 'N<sub>2</sub>');
+        content = content.replace(/\bCl2\b/g, 'Cl<sub>2</sub>');
+        
+        // Handle ionic charges with superscripts
+        content = content.replace(/([A-Za-z]+)(\d*)\+/g, '$1$2<sup>+</sup>');
+        content = content.replace(/([A-Za-z]+)(\d*)-/g, '$1$2<sup>-</sup>');
+        content = content.replace(/\b([A-Za-z]+)(\d+)\+(\d+)\b/g, '$1$2<sup>+$3</sup>');
+        content = content.replace(/\b([A-Za-z]+)(\d+)-(\d+)\b/g, '$1$2<sup>-$3</sup>');
+        
+        // Handle common chemical reaction arrows
+        content = content.replace(/-->/g, ' → ');
+        content = content.replace(/->/g, ' → ');
+        content = content.replace(/<--/g, ' ← ');
+        content = content.replace(/<->/g, ' ↔ ');
+        content = content.replace(/<=>/g, ' ⇌ ');
         content = content.replace(' -> ', ' → ');
         content = content.replace(' <- ', ' ← ');
         content = content.replace(' <-> ', ' ↔ ');

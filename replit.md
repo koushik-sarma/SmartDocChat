@@ -128,7 +128,9 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - July 1, 2025: Enhanced PDF image extraction with comprehensive debugging and automatic trigger
 - July 1, 2025: Updated frontend to display extracted PDF images in chat with click-to-expand functionality
 - July 1, 2025: Completely resolved PDF upload crash with smart processing system (>30MB auto-switches to PyMuPDF)
-- July 1, 2025: Enhanced chemical equation parsing with subscript/superscript support and special character preservation
+- July 1, 2025: Enhanced chemical equation parsing with comprehensive subscript/superscript support
+- July 1, 2025: Fixed JavaScript regex errors and improved chemical formula recognition for student education
+- July 1, 2025: Added extensive chemical formula database (H2O→H₂O, CO2→CO₂, H2SO4→H₂SO₄, ionic charges)
 - July 1, 2025: Added AI personality refresh button with real-time response regeneration capability
 - July 1, 2025: Implemented comprehensive formatting for chemistry and physics content with proper visual styling
 
