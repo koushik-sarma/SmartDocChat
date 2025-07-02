@@ -16,11 +16,24 @@ from .simple_similarity import SimpleSimilarity
 from vector_store import VectorStore
 from web_search import WebSearcher
 
+# AI client setup - prioritize Gemini over OpenAI
 try:
-    from openai import OpenAI
-    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-except ImportError:
-    openai_client = None
+    from google import genai
+    gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+    ai_provider = "gemini"
+    print("Using Google Gemini as AI provider")
+except Exception as e:
+    print(f"Gemini client initialization failed: {e}")
+    gemini_client = None
+    try:
+        from openai import OpenAI
+        openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        ai_provider = "openai"
+        print("Using OpenAI as AI provider")
+    except Exception as e:
+        print(f"OpenAI client initialization failed: {e}")
+        openai_client = None
+        ai_provider = None
 
 class ChatService(BaseService):
     """Clean service for handling chat operations."""
@@ -213,10 +226,42 @@ class ChatService(BaseService):
             return "", []
     
     def _generate_ai_response(self, query: str, context: str, ai_role: str) -> str:
-        """Generate response using OpenAI."""
-        if not openai_client:
-            return "AI service is not available. Please check configuration."
+        """Generate response using available AI provider (Gemini or OpenAI)."""
+        global ai_provider, gemini_client, openai_client
         
+        if ai_provider == "gemini" and gemini_client:
+            return self._generate_gemini_response(query, context, ai_role)
+        elif ai_provider == "openai" and openai_client:
+            return self._generate_openai_response(query, context, ai_role)
+        else:
+            return "AI service is not available. Please check configuration."
+    
+    def _generate_gemini_response(self, query: str, context: str, ai_role: str) -> str:
+        """Generate response using Google Gemini."""
+        try:
+            # Prepare prompt
+            system_prompt = ai_role + "\n\nUse the provided context to answer questions accurately. If the context doesn't contain relevant information, provide a helpful general response."
+            
+            if context:
+                prompt = f"{system_prompt}\n\nContext:\n{context}\n\nQuestion: {query}"
+            else:
+                prompt = f"{system_prompt}\n\nQuestion: {query}"
+            
+            # Call Gemini API
+            response = gemini_client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            
+            response_text = response.text
+            return response_text if response_text else "I apologize, but I couldn't generate a proper response."
+            
+        except Exception as e:
+            self.logger.error(f"Gemini response generation failed: {e}")
+            return f"I apologize, but I encountered an error processing your request: {str(e)}"
+    
+    def _generate_openai_response(self, query: str, context: str, ai_role: str) -> str:
+        """Generate response using OpenAI."""
         try:
             # Prepare prompt
             system_prompt = ai_role + "\n\nUse the provided context to answer questions accurately. If the context doesn't contain relevant information, provide a helpful general response."
@@ -248,7 +293,7 @@ class ChatService(BaseService):
             return response_content if response_content is not None else "I apologize, but I couldn't generate a proper response."
             
         except Exception as e:
-            self.logger.error(f"AI response generation failed: {e}")
+            self.logger.error(f"OpenAI response generation failed: {e}")
             return f"I apologize, but I encountered an error processing your request: {str(e)}"
     
     def _save_chat_messages(self, user_message: str, ai_response: str, sources: List[Dict], session_id: str, ai_role: str):
