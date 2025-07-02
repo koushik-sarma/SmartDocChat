@@ -18,7 +18,6 @@ from .base_service import BaseService
 # Import processors
 try:
     import pdfplumber
-    import fitz  # PyMuPDF
     from docx import Document as DocxDocument
 except ImportError as e:
     logging.warning(f"Optional dependency missing: {e}")
@@ -131,15 +130,24 @@ class DocumentService(BaseService):
             raise
     
     def _extract_pdf_chunks(self, pdf_path: str) -> Generator[str, None, None]:
-        """Extract text from PDF with multiple fallback methods."""
-        # Try pdfplumber first (best for text extraction)
+        """Extract text from PDF with optimized processing for large files."""
+        file_size = os.path.getsize(pdf_path)
+        logger.info(f"Processing PDF: {os.path.basename(pdf_path)} ({file_size} bytes)")
+        
+        # Process with optimized settings for large files
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 current_chunk = ""
                 word_count = 0
+                total_pages = len(pdf.pages)
+                logger.info(f"Processing {total_pages} pages from PDF")
                 
-                for page in pdf.pages:
+                for page_num, page in enumerate(pdf.pages):
                     try:
+                        # Log progress for large files
+                        if page_num % 50 == 0:
+                            logger.info(f"Processing page {page_num + 1}/{total_pages}")
+                        
                         text = page.extract_text() or ""
                         cleaned_text = self._clean_text(text)
                         
@@ -153,7 +161,7 @@ class DocumentService(BaseService):
                                 current_chunk = ""
                                 word_count = 0
                     except Exception as e:
-                        logger.warning(f"Error processing page in {pdf_path}: {e}")
+                        logger.warning(f"Error processing page {page_num} in {pdf_path}: {e}")
                         continue
                 
                 if current_chunk.strip():
@@ -161,40 +169,7 @@ class DocumentService(BaseService):
                 return
                     
         except Exception as e:
-            logger.warning(f"pdfplumber failed for {pdf_path}: {e}")
-        
-        # Fallback to PyMuPDF
-        try:
-            doc = fitz.open(pdf_path)
-            current_chunk = ""
-            word_count = 0
-            
-            for page_num in range(doc.page_count):
-                try:
-                    page = doc[page_num]
-                    text = page.get_text()
-                    cleaned_text = self._clean_text(text)
-                    
-                    words = cleaned_text.split()
-                    for word in words:
-                        current_chunk += " " + word
-                        word_count += 1
-                        
-                        if word_count >= self.CHUNK_SIZE:
-                            yield current_chunk.strip()
-                            current_chunk = ""
-                            word_count = 0
-                except Exception as e:
-                    logger.warning(f"Error processing page {page_num} in {pdf_path}: {e}")
-                    continue
-            
-            doc.close()
-            
-            if current_chunk.strip():
-                yield current_chunk.strip()
-                
-        except Exception as e:
-            logger.error(f"All PDF extraction methods failed for {pdf_path}: {e}")
+            logger.error(f"PDF processing failed for {pdf_path}: {e}")
             raise ValueError(f"Could not extract text from PDF: {str(e)}")
     
     def _extract_docx_chunks(self, docx_path: str) -> Generator[str, None, None]:

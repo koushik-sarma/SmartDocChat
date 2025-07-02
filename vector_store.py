@@ -8,6 +8,10 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
+class QuotaExceededException(Exception):
+    """Custom exception for API quota exceeded."""
+    pass
+
 class VectorStore:
     def __init__(self, dimension: int = 1536):  # OpenAI embedding dimension
         self.dimension = dimension
@@ -82,13 +86,18 @@ class VectorStore:
         try:
             response = self.openai_client.embeddings.create(
                 model="text-embedding-3-small",
-                input=texts
+                input=texts,
+                timeout=30  # Fast timeout to avoid hanging
             )
             
             embeddings = np.array([item.embedding for item in response.data])
             return embeddings
             
         except Exception as e:
+            error_msg = str(e)
+            if "quota" in error_msg.lower() or "429" in error_msg:
+                logger.warning("OpenAI quota exceeded - skipping embeddings")
+                raise QuotaExceededException("OpenAI quota exceeded")
             logger.error(f"Error getting embeddings: {e}")
             raise
     
