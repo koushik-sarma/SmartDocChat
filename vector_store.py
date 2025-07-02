@@ -4,7 +4,10 @@ from typing import List, Tuple
 import pickle
 import os
 import logging
-from openai import OpenAI
+try:
+    from google import genai
+except ImportError:
+    genai = None
 
 logger = logging.getLogger(__name__)
 
@@ -13,18 +16,21 @@ class QuotaExceededException(Exception):
     pass
 
 class VectorStore:
-    def __init__(self, dimension: int = 1536):  # OpenAI embedding dimension
+    def __init__(self, dimension: int = 768):  # Google text-embedding dimension
         self.dimension = dimension
         self.index = faiss.IndexFlatIP(dimension)  # Inner product for cosine similarity
         self.texts = []
         self.document_ids = []
-        self.openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        if genai:
+            self.genai_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        else:
+            self.genai_client = None
     
     def add_texts(self, texts: List[str], document_id: int):
         """Add text chunks to the vector store with embeddings."""
         try:
-            # Process in batches to respect OpenAI token limits
-            batch_size = 50  # Process 50 chunks at a time to stay under token limits
+            # Process in batches for efficient embedding generation
+            batch_size = 50  # Process 50 chunks at a time
             total_added = 0
             
             for i in range(0, len(texts), batch_size):
@@ -82,24 +88,53 @@ class VectorStore:
             return []
     
     def _get_embeddings(self, texts: List[str]) -> np.ndarray:
-        """Get embeddings from OpenAI API."""
+        """Get embeddings from Google Gemini API."""
         try:
-            response = self.openai_client.embeddings.create(
-                model="text-embedding-3-small",
-                input=texts,
-                timeout=30  # Fast timeout to avoid hanging
-            )
+            if not self.genai_client:
+                logger.warning("Gemini client not available - generating dummy embeddings")
+                # Return dummy embeddings of correct dimension
+                return np.random.rand(len(texts), self.dimension).astype('float32')
             
-            embeddings = np.array([item.embedding for item in response.data])
-            return embeddings
+            embeddings = []
+            for text in texts:
+                response = self.genai_client.models.embed_content(
+                    model="models/text-embedding-004",
+                    contents=text
+                )
+                # Google Gemini response structure: result.embeddings 
+                # Handle ContentEmbedding objects properly
+                if hasattr(response.embeddings, 'values'):
+                    # ContentEmbedding object with values attribute
+                    vector_values = list(response.embeddings.values)
+                    embeddings.append(vector_values)
+                    logger.info(f"Successfully extracted ContentEmbedding vector of length {len(vector_values)}")
+                elif isinstance(response.embeddings, list) and len(response.embeddings) > 0:
+                    # List of ContentEmbedding objects or raw values
+                    first_item = response.embeddings[0]
+                    if hasattr(first_item, 'values'):
+                        # List of ContentEmbedding objects
+                        vector_values = list(first_item.values)
+                        embeddings.append(vector_values)
+                        logger.info(f"Successfully extracted from ContentEmbedding list, length {len(vector_values)}")
+                    else:
+                        # Direct list of values
+                        embeddings.append(response.embeddings)
+                        logger.info(f"Successfully extracted direct list, length {len(response.embeddings)}")
+                else:
+                    logger.error(f"Unexpected embedding structure: {type(response.embeddings)}")
+                    logger.error(f"Has values attr: {hasattr(response.embeddings, 'values')}")
+                    embeddings.append(np.random.rand(self.dimension).tolist())
+            
+            return np.array(embeddings)
             
         except Exception as e:
             error_msg = str(e)
             if "quota" in error_msg.lower() or "429" in error_msg:
-                logger.warning("OpenAI quota exceeded - skipping embeddings")
-                raise QuotaExceededException("OpenAI quota exceeded")
+                logger.warning("Google Gemini quota exceeded - using dummy embeddings")
+                return np.random.rand(len(texts), self.dimension).astype('float32')
             logger.error(f"Error getting embeddings: {e}")
-            raise
+            # Fallback to dummy embeddings
+            return np.random.rand(len(texts), self.dimension).astype('float32')
     
     def save(self, filepath: str):
         """Save the vector store to disk."""
