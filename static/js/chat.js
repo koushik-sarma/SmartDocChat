@@ -574,13 +574,15 @@ class PDFChatApp {
     
     updateInputState() {
         const hasDocuments = this.documentsList.children.length > 0;
-        this.messageInput.disabled = !hasDocuments;
-        this.sendButton.disabled = !hasDocuments;
+        
+        // Always enable input - the system can work with web search alone
+        this.messageInput.disabled = false;
+        this.sendButton.disabled = false;
         
         if (hasDocuments) {
             this.messageInput.placeholder = "Ask a question about your documents...";
         } else {
-            this.messageInput.placeholder = "Upload a PDF document first...";
+            this.messageInput.placeholder = "Ask any question (I'll search the web for answers)...";
         }
     }
     
