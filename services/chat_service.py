@@ -12,6 +12,7 @@ from app import db
 from models import ChatMessage, Document, UserProfile
 from .base_service import BaseService
 from .document_service import DocumentService
+from .simple_similarity import SimpleSimilarity
 from vector_store import VectorStore
 from web_search import WebSearcher
 
@@ -28,6 +29,7 @@ class ChatService(BaseService):
         super().__init__()
         self.document_service = DocumentService()
         self.vector_store = VectorStore()
+        self.simple_similarity = SimpleSimilarity()
         self.web_searcher = WebSearcher()
         
         # Load existing vector store if available
@@ -114,9 +116,45 @@ class ChatService(BaseService):
                         context = "\n\n".join(context_texts) if context_texts else ""
                         return context, sources
             except Exception as vector_error:
-                self.logger.warning(f"Vector search failed, using text search fallback: {vector_error}")
+                self.logger.warning(f"Vector search failed, using similarity search fallback: {vector_error}")
             
-            # Fallback: Basic text search in document content
+            # Fallback: Use simple similarity search
+            try:
+                # Build document index for similarity search
+                doc_texts = {}
+                for doc in active_docs:
+                    if os.path.exists(doc.file_path):
+                        chunks = list(self.document_service.extract_text_chunks(doc.file_path))
+                        doc_texts[doc.id] = ' '.join(chunks)
+                
+                if doc_texts:
+                    # Add documents to similarity index
+                    self.simple_similarity.add_documents(doc_texts)
+                    
+                    # Search for similar content
+                    results = self.simple_similarity.search(query, k=5)
+                    
+                    if results:
+                        context_texts = [text for text, score, doc_id in results if score > 0.3]
+                        
+                        # Create sources list
+                        sources = []
+                        found_doc_ids = {doc_id for _, _, doc_id in results}
+                        for doc in active_docs:
+                            if doc.id in found_doc_ids:
+                                sources.append({
+                                    'type': 'document',
+                                    'title': doc.filename,
+                                    'content': f"Similarity search in document ({doc.chunk_count} chunks)"
+                                })
+                        
+                        context = "\n\n".join(context_texts) if context_texts else ""
+                        return context, sources
+                
+            except Exception as similarity_error:
+                self.logger.warning(f"Similarity search failed: {similarity_error}")
+            
+            # Final fallback: Basic text search
             context_parts = []
             sources = []
             
@@ -130,7 +168,7 @@ class ChatService(BaseService):
                         query_lower = query.lower()
                         if any(keyword in full_text.lower() for keyword in query_lower.split()):
                             # Take first few chunks as context
-                            context_parts.extend(chunks[:3])
+                            context_parts.extend(chunks[:2])
                             sources.append({
                                 'type': 'document',
                                 'title': doc.filename,
