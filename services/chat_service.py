@@ -244,7 +244,8 @@ class ChatService(BaseService):
                 temperature=0.7
             )
             
-            return response.choices[0].message.content
+            response_content = response.choices[0].message.content
+            return response_content if response_content is not None else "I apologize, but I couldn't generate a proper response."
             
         except Exception as e:
             self.logger.error(f"AI response generation failed: {e}")

@@ -338,10 +338,13 @@ class PDFChatApp {
                 throw new Error(`Server returned invalid JSON. Response starts with: ${responseText.substring(0, 100)}`);
             }
             
-            if (response.ok) {
-                this.addMessageToChat('assistant', result.response, result.sources);
+            if (response.ok && result && result.success) {
+                const assistantResponse = result.data?.response || result.response || 'No response received';
+                const sources = result.data?.sources || result.sources || null;
+                this.addMessageToChat('assistant', assistantResponse, sources);
             } else {
-                this.addMessageToChat('assistant', `❌ Error: ${result.error}`, null);
+                const errorMessage = (result && (result.error || result.message)) || `Server error: ${response.status}`;
+                this.addMessageToChat('assistant', `❌ Error: ${errorMessage}`, null);
             }
         } catch (error) {
             console.error('Chat error:', error);
@@ -352,6 +355,14 @@ class PDFChatApp {
     }
     
     addMessageToChat(type, content, sources = null) {
+        // Ensure content is not null or undefined
+        if (content === null || content === undefined) {
+            content = 'No message content available';
+        }
+        
+        // Ensure content is a string
+        content = String(content);
+        
         // Remove welcome message if present
         const welcomeMsg = this.chatMessages.querySelector('.welcome-message');
         if (welcomeMsg) {
@@ -395,9 +406,10 @@ class PDFChatApp {
         }
         
         let ttsControlsHtml = '';
-        if (type === 'assistant') {
+        if (type === 'assistant' && content) {
+            const safeContent = (content || '').toString().replace(/"/g, '&quot;');
             ttsControlsHtml = `
-                <div class="tts-controls mt-2" data-message="${content.replace(/"/g, '&quot;')}">
+                <div class="tts-controls mt-2" data-message="${safeContent}">
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <button class="btn btn-sm btn-outline-primary tts-btn tts-play-btn" 
                                 title="Play with voice">
