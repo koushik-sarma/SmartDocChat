@@ -89,32 +89,58 @@ class ChatService(BaseService):
             if not active_docs:
                 return "", []
             
-            # Search vector store
-            results = self.vector_store.search(query, k=5)
-            if not results:
-                return "", []
+            # Try vector search first
+            try:
+                results = self.vector_store.search(query, k=5)
+                if results:
+                    # Filter results to only include documents from this session
+                    doc_ids = {doc.id for doc in active_docs}
+                    filtered_results = [(text, score, doc_id) for text, score, doc_id in results if doc_id in doc_ids]
+                    
+                    if filtered_results:
+                        # Combine relevant chunks
+                        context_texts = [text for text, score, doc_id in filtered_results if score > 0.7]
+                        
+                        # Create sources list
+                        sources = []
+                        for doc in active_docs:
+                            if any(doc_id == doc.id for _, _, doc_id in filtered_results):
+                                sources.append({
+                                    'type': 'document',
+                                    'title': doc.filename,
+                                    'content': f"Uploaded document ({doc.chunk_count} chunks)"
+                                })
+                        
+                        context = "\n\n".join(context_texts) if context_texts else ""
+                        return context, sources
+            except Exception as vector_error:
+                self.logger.warning(f"Vector search failed, using text search fallback: {vector_error}")
             
-            # Filter results to only include documents from this session
-            doc_ids = {doc.id for doc in active_docs}
-            filtered_results = [(text, score, doc_id) for text, score, doc_id in results if doc_id in doc_ids]
-            
-            if not filtered_results:
-                return "", []
-            
-            # Combine relevant chunks
-            context_texts = [text for text, score, doc_id in filtered_results if score > 0.7]
-            
-            # Create sources list
+            # Fallback: Basic text search in document content
+            context_parts = []
             sources = []
-            for doc in active_docs:
-                if any(doc_id == doc.id for _, _, doc_id in filtered_results):
-                    sources.append({
-                        'type': 'document',
-                        'title': doc.filename,
-                        'content': f"Uploaded document ({doc.chunk_count} chunks)"
-                    })
             
-            context = "\n\n".join(context_texts) if context_texts else ""
+            for doc in active_docs:
+                try:
+                    if os.path.exists(doc.file_path):
+                        chunks = list(self.document_service.extract_text_chunks(doc.file_path))
+                        full_text = ' '.join(chunks)
+                        
+                        # Simple keyword matching
+                        query_lower = query.lower()
+                        if any(keyword in full_text.lower() for keyword in query_lower.split()):
+                            # Take first few chunks as context
+                            context_parts.extend(chunks[:3])
+                            sources.append({
+                                'type': 'document',
+                                'title': doc.filename,
+                                'content': f"Text search in document ({doc.chunk_count} chunks)"
+                            })
+                except Exception as e:
+                    self.logger.warning(f"Error reading document {doc.filename}: {e}")
+                    continue
+            
+            context = "\n\n".join(context_parts) if context_parts else ""
             return context, sources
             
         except Exception as e:
@@ -231,7 +257,11 @@ class ChatService(BaseService):
             self.vector_store.save('vector_store.pkl')
             
         except Exception as e:
-            self.logger.error(f"Vector store update failed: {e}")
+            if "insufficient_quota" in str(e) or "429" in str(e):
+                self.logger.warning("OpenAI embeddings quota exceeded - continuing without vector search")
+            else:
+                self.logger.error(f"Vector store update failed: {e}")
+            # Don't raise error - continue without vector search
     
     def get_chat_history(self, session_id: str, limit: int = 50) -> List[Dict]:
         """Get chat history for session."""

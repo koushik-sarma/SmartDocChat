@@ -96,7 +96,7 @@ class DocumentService(BaseService):
                     'filename': secure_name,
                     'chunk_count': chunk_count,
                     'file_size': file_size,
-                    'message': f"Successfully uploaded and processed {secure_name}"
+                    'message': f"Successfully uploaded {secure_name}. Note: Vector embeddings temporarily disabled due to API quota."
                 })
                 
             except Exception as e:
