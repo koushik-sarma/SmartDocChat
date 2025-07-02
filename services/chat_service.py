@@ -104,30 +104,29 @@ class ChatService(BaseService):
             if not active_docs:
                 return "", []
             
+            # Rebuild vector store with only session documents to ensure isolation
+            self._rebuild_vector_store_for_session(session_id)
+            
             # Try vector search first
             try:
                 results = self.vector_store.search(query, k=5)
                 if results:
-                    # Filter results to only include documents from this session
-                    doc_ids = {doc.id for doc in active_docs}
-                    filtered_results = [(text, score, doc_id) for text, score, doc_id in results if doc_id in doc_ids]
+                    # Since we rebuilt the vector store with only session docs, all results are valid
+                    # Combine relevant chunks
+                    context_texts = [text for text, score, doc_id in results if score > 0.7]
                     
-                    if filtered_results:
-                        # Combine relevant chunks
-                        context_texts = [text for text, score, doc_id in filtered_results if score > 0.7]
-                        
-                        # Create sources list
-                        sources = []
-                        for doc in active_docs:
-                            if any(doc_id == doc.id for _, _, doc_id in filtered_results):
-                                sources.append({
-                                    'type': 'document',
-                                    'title': doc.filename,
-                                    'content': f"Uploaded document ({doc.chunk_count} chunks)"
-                                })
-                        
-                        context = "\n\n".join(context_texts) if context_texts else ""
-                        return context, sources
+                    # Create sources list
+                    sources = []
+                    for doc in active_docs:
+                        if any(doc_id == doc.id for _, _, doc_id in results):
+                            sources.append({
+                                'type': 'document',
+                                'title': doc.filename,
+                                'content': f"Uploaded document ({doc.chunk_count} chunks)"
+                            })
+                    
+                    context = "\n\n".join(context_texts) if context_texts else ""
+                    return context, sources
             except Exception as vector_error:
                 self.logger.warning(f"Vector search failed, using similarity search fallback: {vector_error}")
             
@@ -389,3 +388,28 @@ class ChatService(BaseService):
             
         except Exception as e:
             return self.error_response(f"Failed to regenerate response: {str(e)}")
+    
+    def _rebuild_vector_store_for_session(self, session_id: str):
+        """Rebuild vector store with only documents from current session."""
+        try:
+            # Clear existing vector store
+            self.vector_store.clear()
+            
+            # Get active documents for this session only
+            active_docs = Document.query.filter_by(session_id=session_id, is_active=True).all()
+            
+            if not active_docs:
+                return
+            
+            # Add documents to vector store
+            for doc in active_docs:
+                if os.path.exists(doc.file_path):
+                    try:
+                        chunks = list(self.document_service.extract_text_chunks(doc.file_path))
+                        if chunks:
+                            self.vector_store.add_texts(chunks, doc.id)
+                    except Exception as e:
+                        self.logger.warning(f"Failed to add document {doc.filename} to vector store: {e}")
+                        
+        except Exception as e:
+            self.logger.error(f"Failed to rebuild vector store for session: {e}")
