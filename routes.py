@@ -41,7 +41,21 @@ def upload_file():
         if result['success']:
             # Update vector store with new document
             chat_service.update_vector_store(session_id)
-            return jsonify(result), 200
+            
+            # Ensure proper response format for frontend
+            response_data = {
+                'success': True,
+                'data': result.get('data', {}),
+                'message': result.get('data', {}).get('message', 'Upload successful'),
+                'document': {
+                    'id': result.get('data', {}).get('document_id'),
+                    'filename': result.get('data', {}).get('filename'),
+                    'chunk_count': result.get('data', {}).get('chunk_count', 0),
+                    'file_size': result.get('data', {}).get('file_size', 0),
+                    'is_active': True
+                }
+            }
+            return jsonify(response_data), 200
         else:
             return jsonify(result), 400
             

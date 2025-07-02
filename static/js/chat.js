@@ -239,13 +239,26 @@ class PDFChatApp {
                 }
             }
             
-            if (response.ok && result && result.message) {
+            if (response.ok && result && result.success) {
+                // Handle successful upload
+                const message = result.data?.message || result.message || 'Upload successful';
+                const chunkCount = result.data?.chunk_count || result.chunk_count || 0;
+                
                 this.showUploadStatus(
-                    `✅ ${result.message} (${result.chunks_processed || 0} chunks processed)`, 
+                    `✅ ${message} (${chunkCount} chunks processed)`, 
                     'success'
                 );
                 
-                if (result.document) {
+                // Create document object for UI
+                const documentData = result.data || result.document || {
+                    id: result.data?.document_id,
+                    filename: result.data?.filename,
+                    chunk_count: result.data?.chunk_count,
+                    file_size: result.data?.file_size,
+                    is_active: true
+                };
+                
+                if (documentData && documentData.filename) {
                     try {
                         // Check if documentsList exists
                         if (!this.documentsList) {
@@ -254,7 +267,7 @@ class PDFChatApp {
                         }
                         
                         if (this.documentsList) {
-                            this.addDocumentToList(result.document);
+                            this.addDocumentToList(documentData);
                             this.updateDocumentCount();
                             this.updateInputState();
                             this.loadStats();
@@ -264,12 +277,12 @@ class PDFChatApp {
                     } catch (uiError) {
                         console.error('UI update error:', uiError);
                         // Don't fail the upload if UI update fails - just log the error
-                        console.log('Document data:', result.document);
+                        console.log('Document data:', documentData);
                         console.log('DocumentsList element:', this.documentsList);
                     }
                 }
             } else {
-                const errorMsg = (result && result.error) || `HTTP ${response.status}: ${response.statusText}`;
+                const errorMsg = (result && result.error) || `Upload failed: ${response.status} ${response.statusText}`;
                 this.showUploadStatus(`❌ ${errorMsg}`, 'error');
             }
         } catch (error) {
