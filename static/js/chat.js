@@ -162,7 +162,7 @@ class PDFChatApp {
                 this.updateDocumentCount();
                 this.updateInputState();
                 
-                console.log('Documents loaded, input enabled:', documents.length > 0);
+                console.log('Documents loaded, input enabled:', true); // Always enabled now
             } else {
                 console.error('Failed to load documents:', response.status);
             }
@@ -327,15 +327,19 @@ class PDFChatApp {
             
             // Get the raw response text first to debug parsing issues
             const responseText = await response.text();
-            console.log('Chat response text:', responseText.substring(0, 200) + '...');
+            console.log('Chat response status:', response.status);
+            console.log('Chat response headers:', Object.fromEntries(response.headers.entries()));
+            console.log('Chat response text length:', responseText.length);
+            console.log('Chat response text preview:', responseText.substring(0, 300));
             
             let result;
             try {
                 result = JSON.parse(responseText);
+                console.log('Parsed result:', result);
             } catch (parseError) {
                 console.error('JSON parsing failed:', parseError);
-                console.error('Response text:', responseText);
-                throw new Error(`Server returned invalid JSON. Response starts with: ${responseText.substring(0, 100)}`);
+                console.error('Full response text:', responseText);
+                throw new Error(`Server returned invalid JSON. Full response: ${responseText}`);
             }
             
             if (response.ok && result && result.success) {

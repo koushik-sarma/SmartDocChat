@@ -141,6 +141,11 @@ This is a Flask-based PDF chat application that implements Retrieval-Augmented G
 - July 1, 2025: Fixed missing PyMuPDF extraction method preventing large file processing
 - July 1, 2025: Corrected type errors in chat service causing null response crashes
 - July 1, 2025: Verified complete functionality: uploads (text/PDF), chat with document context, session isolation
+- July 2, 2025: Integrated Google Gemini API as primary AI provider to replace OpenAI quota limitations
+- July 2, 2025: Added subtitle "by Koushik Madgula" under RAG Assistant title for proper attribution
+- July 2, 2025: Fixed session isolation issue - documents now properly isolated per user session with vector store rebuilding
+- July 2, 2025: Resolved frontend input disabling issue - chat now works without documents using web search
+- July 2, 2025: Enhanced error handling and debugging for better troubleshooting of frontend issues
 
 ## Phase 1 Complete - Checkpoint
 Successfully implemented comprehensive PDF chat application with:
