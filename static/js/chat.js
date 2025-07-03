@@ -74,6 +74,16 @@ class PDFChatApp {
             }
         });
         
+        // Handle Enter key in textarea (Ctrl+Enter to submit, plain Enter for new line)
+        if (this.messageInput) {
+            this.messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    this.handleChatSubmit(e);
+                }
+            });
+        }
+        
         // Handle window resize
         window.addEventListener('resize', () => {
             if (window.innerWidth >= 768) {
