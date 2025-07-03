@@ -58,6 +58,18 @@ class PDFChatApp {
             }
         });
         
+        // Document management event delegation
+        document.addEventListener('click', (e) => {
+            // Delete button
+            if (e.target.classList.contains('delete-doc-btn') || e.target.closest('.delete-doc-btn')) {
+                this.deleteDocument(e);
+            }
+            // Toggle button
+            if (e.target.classList.contains('document-toggle')) {
+                this.toggleDocumentActive(e);
+            }
+        });
+        
         // Mobile sidebar controls
         if (this.sidebarToggle) {
             this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
@@ -544,35 +556,26 @@ class PDFChatApp {
         
         docDiv.innerHTML = `
             <div class="d-flex align-items-center">
-                <div class="form-check me-2">
-                    <input class="form-check-input doc-toggle" type="checkbox" 
-                           ${isActive ? 'checked' : ''} 
-                           data-doc-id="${docData.id}"
-                           title="Include in context">
-                </div>
+                <input type="checkbox" class="form-check-input me-2 document-toggle" 
+                       data-doc-id="${docData.id}" ${isActive ? 'checked' : ''}>
                 <i class="fas fa-file-pdf text-danger me-2"></i>
-                <div class="flex-grow-1">
+                <div class="flex-grow-1 me-2">
                     <div class="small fw-bold text-truncate">${docData.filename}</div>
                     <div class="text-muted" style="font-size: 0.75rem;">
                         ${docData.chunk_count} chunks • ${this.formatFileSize(docData.file_size)}
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-danger ms-2 delete-doc-btn" 
-                        data-doc-id="${docData.id}" 
-                        title="Delete document">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <div class="document-actions">
+                    <button class="btn btn-sm btn-outline-danger delete-doc-btn" 
+                            data-doc-id="${docData.id}" 
+                            title="Delete document">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </div>
         `;
         
         this.documentsList.appendChild(docDiv);
-        
-        // Add event listeners for the new controls
-        const toggleCheckbox = docDiv.querySelector('.doc-toggle');
-        const deleteButton = docDiv.querySelector('.delete-doc-btn');
-        
-        toggleCheckbox.addEventListener('change', (e) => this.toggleDocumentActive(e));
-        deleteButton.addEventListener('click', (e) => this.deleteDocument(e));
     }
     
     updateDocumentCount() {

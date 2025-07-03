@@ -507,3 +507,110 @@ body.sidebar-open {
 [data-bs-theme="light"] .message-text .greek-letter {
     color: #0d6efd;
 }
+
+/* Light mode chat header styling */
+[data-bs-theme="light"] .chat-header {
+    background-color: #f8f9fa;
+    color: #212529;
+    border-bottom: 1px solid #dee2e6;
+}
+
+[data-bs-theme="light"] .chat-header h4,
+[data-bs-theme="light"] .chat-header .text-muted {
+    color: #6c757d !important;
+}
+
+/* Light mode AI response background - green */
+[data-bs-theme="light"] .assistant-message .message-content {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #a3cfbb;
+}
+
+/* Light mode user message styling */
+[data-bs-theme="light"] .user-message .message-content {
+    background-color: #0d6efd;
+    color: white;
+}
+
+/* Light mode sidebar styling */
+[data-bs-theme="light"] .sidebar {
+    background-color: #f8f9fa;
+    color: #212529;
+    border-right: 1px solid #dee2e6;
+}
+
+[data-bs-theme="light"] .sidebar-header {
+    background-color: #e9ecef;
+    border-bottom: 1px solid #dee2e6;
+}
+
+[data-bs-theme="light"] .document-item {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    color: #212529;
+}
+
+[data-bs-theme="light"] .document-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Light mode chat input */
+[data-bs-theme="light"] .chat-input {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Document actions styling */
+.document-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.delete-doc-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.document-item:hover .delete-doc-btn {
+    opacity: 1;
+}
+
+.delete-doc-btn:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Fix document item layout */
+.document-item {
+    min-height: 60px;
+}
+
+.document-item .d-flex {
+    width: 100%;
+}
+
+.document-item .flex-grow-1 {
+    overflow: hidden;
+}
+
+/* Document toggle checkbox */
+.document-toggle {
+    flex-shrink: 0;
+}
+
+/* Light mode document controls */
+[data-bs-theme="light"] .delete-doc-btn {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+[data-bs-theme="light"] .delete-doc-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}

@@ -101,14 +101,23 @@
                         
                         <div id="documentsList">
                             {% for doc in documents %}
-                            <div class="document-item mb-2 p-2 rounded" data-doc-id="{{ doc.id }}">
+                            <div class="document-item mb-2 p-2 rounded position-relative" data-doc-id="{{ doc.id }}">
                                 <div class="d-flex align-items-center">
+                                    <input type="checkbox" class="form-check-input me-2 document-toggle" 
+                                           data-doc-id="{{ doc.id }}" checked>
                                     <i class="fas fa-file-pdf text-danger me-2"></i>
-                                    <div class="flex-grow-1">
+                                    <div class="flex-grow-1 me-2">
                                         <div class="small fw-bold text-truncate">{{ doc.filename }}</div>
                                         <div class="text-muted" style="font-size: 0.75rem;">
                                             {{ doc.chunk_count }} chunks
                                         </div>
+                                    </div>
+                                    <div class="document-actions">
+                                        <button class="btn btn-sm btn-outline-danger delete-doc-btn" 
+                                                data-doc-id="{{ doc.id }}" 
+                                                title="Delete document">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
