@@ -20,7 +20,7 @@ class PDFChatApp {
         this.documentsList = document.getElementById('documentsList');
         this.docCount = document.getElementById('docCount');
         this.clearSessionBtn = document.getElementById('clearSession');
-        this.compareDocsBtn = document.getElementById('compareDocsBtn');
+
         this.typingIndicator = document.getElementById('typingIndicator');
         this.totalChunks = document.getElementById('totalChunks');
         this.sessionDocs = document.getElementById('sessionDocs');
@@ -131,10 +131,7 @@ class PDFChatApp {
             clearChatBtnMobile.addEventListener('click', () => this.clearChatHistory());
         }
         
-        // Compare documents button
-        if (this.compareDocsBtn) {
-            this.compareDocsBtn.addEventListener('click', () => this.compareDocuments());
-        }
+
         
         // Initialize voice input by default
         this.initializeVoiceInput();
@@ -583,10 +580,7 @@ class PDFChatApp {
         this.docCount.textContent = count;
         this.sessionDocs.textContent = count;
         
-        // Enable/disable compare button based on document count
-        if (this.compareDocsBtn) {
-            this.compareDocsBtn.disabled = count < 2;
-        }
+
     }
     
     updateInputState() {
@@ -1389,84 +1383,6 @@ class PDFChatApp {
         }
     }
     
-    async compareDocuments() {
-        // Get all uploaded documents
-        try {
-            const response = await fetch('/documents');
-            if (!response.ok) throw new Error('Failed to fetch documents');
-            
-            const documents = await response.json();
-            
-            if (documents.length < 2) {
-                this.showError(`You need at least 2 documents to compare. You currently have ${documents.length} document(s). Please upload more documents.`);
-                return;
-            }
-            
-            // Create comparison request with all document IDs
-            const documentIds = documents.map(doc => doc.id);
-            
-            // Show loading state
-            this.compareDocsBtn.disabled = true;
-            this.compareDocsBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Comparing...';
-            
-            const compareResponse = await fetch('/compare-documents', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ document_ids: documentIds })
-            });
-            
-            if (!compareResponse.ok) throw new Error('Failed to compare documents');
-            
-            const comparisonResult = await compareResponse.json();
-            
-            // Add comparison result to chat
-            const comparison = comparisonResult.comparison;
-            let resultText = `📊 **Document Comparison Results**\n\n`;
-            
-            if (comparisonResult.documents_compared) {
-                resultText += `**Documents Compared:** ${comparisonResult.documents_compared.map(doc => doc.filename).join(', ')}\n\n`;
-            }
-            
-            if (comparison.common_themes && comparison.common_themes.length > 0) {
-                resultText += `**Common Themes:**\n${comparison.common_themes.map(theme => `• ${theme}`).join('\n')}\n\n`;
-            }
-            
-            if (comparison.word_counts) {
-                resultText += `**Document Sizes:**\n${Object.entries(comparison.word_counts).map(([doc, count]) => `• ${doc}: ${count} words`).join('\n')}\n\n`;
-            }
-            
-            if (comparison.unique_content) {
-                resultText += `**Unique Content Per Document:**\n`;
-                Object.entries(comparison.unique_content).forEach(([doc, content]) => {
-                    if (content.length > 0) {
-                        resultText += `**${doc}:** ${content.slice(0, 5).join(', ')}${content.length > 5 ? '...' : ''}\n\n`;
-                    }
-                });
-            }
-            
-            this.addMessageToChat('assistant', resultText,
-                [{
-                    type: 'comparison',
-                    title: 'Document Comparison',
-                    snippet: `Compared ${documents.length} documents`,
-                    source: 'AI Analysis'
-                }]
-            );
-            
-            // Scroll to show new message
-            this.scrollToBottom();
-            
-        } catch (error) {
-            console.error('Error comparing documents:', error);
-            this.showError(`Failed to compare documents: ${error.message}. Please try again.`);
-        } finally {
-            // Reset button state
-            this.compareDocsBtn.disabled = false;
-            this.compareDocsBtn.innerHTML = '<i class="fas fa-balance-scale me-1"></i> Compare Documents';
-        }
-    }
 }
 
 // Initialize the app when DOM is loaded

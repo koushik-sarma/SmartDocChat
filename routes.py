@@ -133,21 +133,7 @@ def delete_document(doc_id):
         logger.error(f"Delete document error: {e}")
         return jsonify({'success': False, 'error': 'Failed to delete document'}), 500
 
-@app.route('/compare-documents', methods=['POST'])
-def compare_documents():
-    """Compare multiple documents and return analysis."""
-    try:
-        session_id = session_service.get_or_create_session_id(request)
-        result = comparison_service.compare_session_documents(session_id)
-        
-        if result['success']:
-            return jsonify(result), 200
-        else:
-            return jsonify(result), 400
-            
-    except Exception as e:
-        logger.error(f"Compare documents error: {e}")
-        return jsonify({'success': False, 'error': 'Document comparison failed'}), 500
+
 
 @app.route('/profile', methods=['GET', 'POST'])
 def user_profile():
