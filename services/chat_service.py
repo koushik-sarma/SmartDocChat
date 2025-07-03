@@ -112,8 +112,8 @@ class ChatService(BaseService):
                 results = self.vector_store.search(query, k=5)
                 if results:
                     # Since we rebuilt the vector store with only session docs, all results are valid
-                    # Combine relevant chunks
-                    context_texts = [text for text, score, doc_id in results if score > 0.7]
+                    # Combine relevant chunks (lowered threshold for FAISS cosine similarity)
+                    context_texts = [text for text, score, doc_id in results if score > 0.3]
                     
                     # Create sources list
                     sources = []
