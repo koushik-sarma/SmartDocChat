@@ -1,10 +1,13 @@
 """
 Simplified chat service.
 Handles AI chat with clean separation of concerns.
+Includes retry logic with exponential backoff and automatic fallback between AI providers.
 """
 
 import os
 import json
+import time
+import random
 from typing import List, Dict, Tuple, Optional
 from datetime import datetime
 
@@ -16,24 +19,32 @@ from .simple_similarity import SimpleSimilarity
 from vector_store import VectorStore
 from web_search import WebSearcher
 
-# AI client setup - prioritize Gemini over OpenAI
+# Initialize both AI clients for fallback support
+gemini_client = None
+openai_client = None
+ai_provider = None
+
 try:
     from google import genai
     gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
     ai_provider = "gemini"
-    print("Using Google Gemini as AI provider")
+    print("Using Google Gemini as primary AI provider")
 except Exception as e:
     print(f"Gemini client initialization failed: {e}")
-    gemini_client = None
-    try:
-        from openai import OpenAI
-        openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+try:
+    from openai import OpenAI
+    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    if ai_provider is None:
         ai_provider = "openai"
-        print("Using OpenAI as AI provider")
-    except Exception as e:
-        print(f"OpenAI client initialization failed: {e}")
-        openai_client = None
-        ai_provider = None
+        print("Using OpenAI as primary AI provider")
+    else:
+        print("OpenAI available as fallback AI provider")
+except Exception as e:
+    print(f"OpenAI client initialization failed: {e}")
+
+if ai_provider is None:
+    print("WARNING: No AI provider available!")
 
 class ChatService(BaseService):
     """Clean service for handling chat operations."""
@@ -225,75 +236,139 @@ class ChatService(BaseService):
             return "", []
     
     def _generate_ai_response(self, query: str, context: str, ai_role: str) -> str:
-        """Generate response using available AI provider (Gemini or OpenAI)."""
+        """Generate response using available AI provider with retry and fallback."""
         global ai_provider, gemini_client, openai_client
         
+        # Try primary provider first with retries
         if ai_provider == "gemini" and gemini_client:
-            return self._generate_gemini_response(query, context, ai_role)
+            response = self._try_with_retry(
+                lambda: self._generate_gemini_response(query, context, ai_role),
+                provider_name="Gemini"
+            )
+            if response:
+                return response
+            
+            # Fallback to OpenAI if Gemini fails
+            if openai_client:
+                self.logger.info("Falling back to OpenAI after Gemini failure")
+                response = self._try_with_retry(
+                    lambda: self._generate_openai_response(query, context, ai_role),
+                    provider_name="OpenAI"
+                )
+                if response:
+                    return response
+        
         elif ai_provider == "openai" and openai_client:
-            return self._generate_openai_response(query, context, ai_role)
-        else:
-            return "AI service is not available. Please check configuration."
+            response = self._try_with_retry(
+                lambda: self._generate_openai_response(query, context, ai_role),
+                provider_name="OpenAI"
+            )
+            if response:
+                return response
+            
+            # Fallback to Gemini if OpenAI fails
+            if gemini_client:
+                self.logger.info("Falling back to Gemini after OpenAI failure")
+                response = self._try_with_retry(
+                    lambda: self._generate_gemini_response(query, context, ai_role),
+                    provider_name="Gemini"
+                )
+                if response:
+                    return response
+        
+        return "I'm having trouble connecting to AI services right now. Please try again in a few moments."
+    
+    def _try_with_retry(self, func, provider_name: str, max_retries: int = 3, base_delay: float = 1.0) -> Optional[str]:
+        """
+        Execute function with exponential backoff retry logic.
+        Returns None if all retries fail.
+        """
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                result = func()
+                # Check if result is an error message (starts with apology)
+                if result and not result.startswith("I apologize"):
+                    return result
+                elif result and result.startswith("I apologize"):
+                    # This is an error, extract and check if retryable
+                    if "503" in result or "overloaded" in result.lower() or "rate" in result.lower():
+                        last_error = result
+                        # Continue to retry
+                    else:
+                        # Non-retryable error, return as-is
+                        return result
+            except Exception as e:
+                error_str = str(e)
+                last_error = error_str
+                
+                # Check if error is retryable (503, rate limit, overloaded)
+                if any(x in error_str.lower() for x in ['503', 'overloaded', 'rate', 'quota', 'unavailable']):
+                    self.logger.warning(f"{provider_name} attempt {attempt + 1}/{max_retries} failed: {e}")
+                else:
+                    # Non-retryable error
+                    self.logger.error(f"{provider_name} non-retryable error: {e}")
+                    return None
+            
+            # Calculate delay with exponential backoff and jitter
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                self.logger.info(f"Retrying {provider_name} in {delay:.2f} seconds...")
+                time.sleep(delay)
+        
+        self.logger.error(f"{provider_name} failed after {max_retries} retries. Last error: {last_error}")
+        return None
     
     def _generate_gemini_response(self, query: str, context: str, ai_role: str) -> str:
         """Generate response using Google Gemini."""
-        try:
-            # Prepare prompt
-            system_prompt = ai_role + "\n\nUse the provided context to answer questions accurately. If the context doesn't contain relevant information, provide a helpful general response."
-            
-            if context:
-                prompt = f"{system_prompt}\n\nContext:\n{context}\n\nQuestion: {query}"
-            else:
-                prompt = f"{system_prompt}\n\nQuestion: {query}"
-            
-            # Call Gemini API
-            response = gemini_client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt
-            )
-            
-            response_text = response.text
-            return response_text if response_text else "I apologize, but I couldn't generate a proper response."
-            
-        except Exception as e:
-            self.logger.error(f"Gemini response generation failed: {e}")
-            return f"I apologize, but I encountered an error processing your request: {str(e)}"
+        # Prepare prompt
+        system_prompt = ai_role + "\n\nUse the provided context to answer questions accurately. If the context doesn't contain relevant information, provide a helpful general response."
+        
+        if context:
+            prompt = f"{system_prompt}\n\nContext:\n{context}\n\nQuestion: {query}"
+        else:
+            prompt = f"{system_prompt}\n\nQuestion: {query}"
+        
+        # Call Gemini API - let exceptions propagate for retry logic
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        
+        response_text = response.text
+        return response_text if response_text else "I apologize, but I couldn't generate a proper response."
     
     def _generate_openai_response(self, query: str, context: str, ai_role: str) -> str:
         """Generate response using OpenAI."""
-        try:
-            # Prepare prompt
-            system_prompt = ai_role + "\n\nUse the provided context to answer questions accurately. If the context doesn't contain relevant information, provide a helpful general response."
-            
-            messages = [
-                {"role": "system", "content": system_prompt}
-            ]
-            
-            if context:
-                messages.append({
-                    "role": "user", 
-                    "content": f"Context:\n{context}\n\nQuestion: {query}"
-                })
-            else:
-                messages.append({
-                    "role": "user", 
-                    "content": query
-                })
-            
-            # Call OpenAI API
-            response = openai_client.chat.completions.create(
-                model="gpt-4o",  # Latest model
-                messages=messages,
-                max_tokens=1000,
-                temperature=0.7
-            )
-            
-            response_content = response.choices[0].message.content
-            return response_content if response_content is not None else "I apologize, but I couldn't generate a proper response."
-            
-        except Exception as e:
-            self.logger.error(f"OpenAI response generation failed: {e}")
-            return f"I apologize, but I encountered an error processing your request: {str(e)}"
+        # Prepare prompt
+        system_prompt = ai_role + "\n\nUse the provided context to answer questions accurately. If the context doesn't contain relevant information, provide a helpful general response."
+        
+        messages = [
+            {"role": "system", "content": system_prompt}
+        ]
+        
+        if context:
+            messages.append({
+                "role": "user", 
+                "content": f"Context:\n{context}\n\nQuestion: {query}"
+            })
+        else:
+            messages.append({
+                "role": "user", 
+                "content": query
+            })
+        
+        # Call OpenAI API - let exceptions propagate for retry logic
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",  # Latest model
+            messages=messages,
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        response_content = response.choices[0].message.content
+        return response_content if response_content is not None else "I apologize, but I couldn't generate a proper response."
     
     def _save_chat_messages(self, user_message: str, ai_response: str, sources: List[Dict], session_id: str, ai_role: str):
         """Save chat messages to database."""
