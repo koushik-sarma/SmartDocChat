@@ -278,40 +278,45 @@ class ChatService(BaseService):
         
         return "I'm having trouble connecting to AI services right now. Please try again in a few moments."
     
+    def _is_retryable_error(self, error) -> bool:
+        """Check if an error is retryable (503, rate limit, overloaded, etc.)."""
+        error_str = str(error).lower()
+        retryable_patterns = [
+            '503', 'overloaded', 'rate', 'quota', 'unavailable',
+            'resource_exhausted', 'too many requests', 'try again',
+            'temporarily unavailable', 'service unavailable', 'busy'
+        ]
+        return any(pattern in error_str for pattern in retryable_patterns)
+    
     def _try_with_retry(self, func, provider_name: str, max_retries: int = 3, base_delay: float = 1.0) -> Optional[str]:
         """
         Execute function with exponential backoff retry logic.
-        Returns None if all retries fail.
+        Returns None if all retries fail (signals need to try fallback).
+        Returns string response on success.
         """
         last_error = None
         
         for attempt in range(max_retries):
             try:
                 result = func()
-                # Check if result is an error message (starts with apology)
-                if result and not result.startswith("I apologize"):
+                # Any non-empty result from the AI is a success
+                if result:
                     return result
-                elif result and result.startswith("I apologize"):
-                    # This is an error, extract and check if retryable
-                    if "503" in result or "overloaded" in result.lower() or "rate" in result.lower():
-                        last_error = result
-                        # Continue to retry
-                    else:
-                        # Non-retryable error, return as-is
-                        return result
-            except Exception as e:
-                error_str = str(e)
-                last_error = error_str
+                # Empty response - retry
+                last_error = "Empty response"
+                self.logger.warning(f"{provider_name} attempt {attempt + 1}/{max_retries} returned empty response")
                 
-                # Check if error is retryable (503, rate limit, overloaded)
-                if any(x in error_str.lower() for x in ['503', 'overloaded', 'rate', 'quota', 'unavailable']):
-                    self.logger.warning(f"{provider_name} attempt {attempt + 1}/{max_retries} failed: {e}")
-                else:
-                    # Non-retryable error
+            except Exception as e:
+                last_error = str(e)
+                self.logger.warning(f"{provider_name} attempt {attempt + 1}/{max_retries} failed: {e}")
+                
+                # Check if error is NOT retryable (authentication, invalid key, etc.)
+                non_retryable_patterns = ['invalid_api_key', 'authentication', 'permission', 'unauthorized', '401', '403']
+                if any(pattern in str(e).lower() for pattern in non_retryable_patterns):
                     self.logger.error(f"{provider_name} non-retryable error: {e}")
                     return None
             
-            # Calculate delay with exponential backoff and jitter
+            # Calculate delay with exponential backoff and jitter before next attempt
             if attempt < max_retries - 1:
                 delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
                 self.logger.info(f"Retrying {provider_name} in {delay:.2f} seconds...")
