@@ -1,3 +1,0 @@
-This is a simple test document.
-It contains chemical equations like H2O and CO2.
-Testing the upload functionality.
